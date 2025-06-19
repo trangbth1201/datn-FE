@@ -28,15 +28,16 @@ export default function ProductCategory() {
     queryKey: ['products'],
     queryFn: productService.getAllProducts
   });
-  const { data: brandData, isLoading: isLoadingBrand } = useQuery<{docs:IBrand[]}>({
+  const { data: brandData, isLoading: isLoadingBrand } = useQuery<{ docs: IBrand[] }>({
     queryKey: ['brands'],
     queryFn: brandService.getAllBrands
   });
-  console.log('brandData:', brandData)
-  const { data: categoriesData, isLoading: isLoadingCategories } = useQuery<{docs:ICategory[]}>({
+    
+  const { data: categoriesData, isLoading: isLoadingCategories } = useQuery<{ docs: ICategory[] }>({
     queryKey: ['categories'],
     queryFn: categoryService.getAllCategories
   });
+  
   const { data: newProductsData } = useQuery<{ docs: IProduct[] }>({
     queryKey: ['products', 'new'],
     queryFn: productService.getAllProducts
@@ -49,11 +50,11 @@ export default function ProductCategory() {
   }, [productsData?.docs]);
 
   const activeBrands = useMemo(() => {
-    return brandData?.docs?.filter(brand => brand.isActive) || [];
+    return brandData?.docs.filter(brand => brand.isActive && brand.name && brand.slug !== 'thuong-hieu-khong-xac-dinh') || [];
   }, [brandData]);
 
   const activeCategories = useMemo(() => {
-    return categoriesData?.docs.filter(category => category.isActive) || [];
+    return categoriesData?.docs.filter(category => category.isActive && category.name && category.slug !== 'danh-muc-khong-xac-dinh' && category.slug !== 'muc-khong-xac-inh') || [];
   }, [categoriesData]);
 
   const getIdFromSlug = (slug: string, type: 'brand' | 'category'): string => {
@@ -77,7 +78,7 @@ export default function ProductCategory() {
     if (cat) return cat.slug;
 
     for (const subCats of Object.values(subCategoriesData)) {
-      const sub = subCats.filter(sc => sc.isActive).find(sc => sc._id === id);
+      const sub = subCats.filter(sc => sc.isActive && sc.name).find(sc => sc._id === id);
       if (sub) return sub.slug;
     }
 
@@ -86,7 +87,7 @@ export default function ProductCategory() {
 
   const findParentCategorySlug = (subcategoryId: string): string | null => {
     for (const [parentId, subCats] of Object.entries(subCategoriesData)) {
-      if (subCats.filter(sc => sc.isActive).some(sub => sub._id === subcategoryId)) {
+      if (subCats.filter(sc => sc.isActive && sc.name).some(sub => sub._id === subcategoryId)) {
         const parent = activeCategories?.find(c => c._id === parentId);
         return parent?.slug || null;
       }
@@ -161,7 +162,9 @@ export default function ProductCategory() {
         slug: product.slug,
         title: product.name,
         image: product.image[0],
-        price: product.variation?.[0]?.salePrice
+        price: product.variation?.[0]?.salePrice > 0
+          ? product.variation[0].salePrice
+          : product.variation?.[0]?.regularPrice || 0
       }));
   }, [newProductsData?.docs]);
 
@@ -180,7 +183,7 @@ export default function ProductCategory() {
       try {
         const parentCategory = activeCategories?.find(c => c._id === parentId);
         if (parentCategory && parentCategory.subCategories) {
-          const activeSubCategories = parentCategory.subCategories.filter(sc => sc.isActive);
+          const activeSubCategories = parentCategory.subCategories.filter(sc => sc.isActive && sc.name);
           setSubCategoriesData(prev => ({ ...prev, [parentId]: activeSubCategories }));
         }
       } catch (error) {
@@ -200,26 +203,26 @@ export default function ProductCategory() {
     if (cat) return cat.name;
 
     for (const subCats of Object.values(subCategoriesData)) {
-      const sub = subCats.filter(sc => sc.isActive).find(sc => sc._id === selectedCategoryId);
+      const sub = subCats.filter(sc => sc.isActive && sc.name).find(sc => sc._id === selectedCategoryId);
       if (sub) return sub.name;
     }
 
     return 'Tất cả';
   };
 
- const renderProducts = () => {
+  const renderProducts = () => {
     if (isLoadingProducts) return <Spin size="large" className="col-span-full" />;
     if (filteredProducts.length === 0) {
       return <div className="col-span-full text-center text-gray-500 py-8">Không có sản phẩm nào phù hợp với bộ lọc</div>;
     }
     return filteredProducts.map((product: IProduct) => {
-      const displayPrice = product.variation?.[0]?.salePrice > 0 
-        ? product.variation[0].salePrice 
+      const displayPrice = product.variation?.[0]?.salePrice > 0
+        ? product.variation[0].salePrice
         : product.variation?.[0]?.regularPrice;
-      const showDiscount = product.variation?.[0]?.salePrice > 0 && 
+      const showDiscount = product.variation?.[0]?.salePrice > 0 &&
         product.variation[0].salePrice < product.variation[0].regularPrice;
-      
-      const discountPercentage = showDiscount 
+
+      const discountPercentage = showDiscount
         ? Math.round((1 - product.variation[0].salePrice / product.variation[0].regularPrice) * 100)
         : 0;
 
@@ -298,14 +301,16 @@ export default function ProductCategory() {
               <li className="px-2 py-3 text-gray-500">Đang tải...</li>
             ) : (
               showAllBrands && activeBrands?.map((brand: any) => (
-                <li
-                  key={brand._id}
-                  onClick={() => handleBrandSelect(brand._id)}
-                  className={`flex justify-between items-center cursor-pointer px-2 py-2 transition-all duration-200 
-                    ${selectedBrandId === brand._id ? "bg-gray-200 font-semibold" : "hover:bg-gray-100"}`}
-                >
-                  <span className="text-gray-800 text-sm font-medium">{brand.name}</span>
-                </li>
+                brand.name ? (
+                  <li
+                    key={brand._id}
+                    onClick={() => handleBrandSelect(brand._id)}
+                    className={`flex justify-between items-center cursor-pointer px-2 py-2 transition-all duration-200 
+                      ${selectedBrandId === brand._id ? "bg-gray-200 font-semibold" : "hover:bg-gray-100"}`}
+                  >
+                    <span className="text-gray-800 text-sm font-medium">{brand.name}</span>
+                  </li>
+                ) : null
               ))
             )}
           </ul>
@@ -337,10 +342,10 @@ export default function ProductCategory() {
               <li className="px-2 py-3 text-gray-500">Đang tải...</li>
             ) : (
               showAllCategories && activeCategories
-                ?.filter(cat => !cat.parentId)
+                ?.filter(cat => !cat.parentId && cat.name)
                 ?.map((cat: any) => {
-                  const hasActiveSubCategories = activeCategories.some(subCat => subCat.parentId === cat._id && subCat.isActive) ||
-                    (subCategoriesData[cat._id]?.filter(sc => sc.isActive)?.length > 0);
+                  const hasActiveSubCategories = activeCategories.some(subCat => subCat.parentId === cat._id && subCat.isActive && subCat.name) ||
+                    (subCategoriesData[cat._id]?.filter(sc => sc.isActive && sc.name)?.length > 0);
                   const isExpanded = expandedCategorySlug === cat.slug;
 
                   return (
@@ -368,7 +373,7 @@ export default function ProductCategory() {
                       </li>
                       {hasActiveSubCategories && isExpanded && (
                         <ul className="pl-6 bg-gray-50">
-                          {subCategoriesData[cat._id]?.filter(subCat => subCat.isActive)?.map((subCat: any) => (
+                          {subCategoriesData[cat._id]?.filter(subCat => subCat.isActive && subCat.name)?.map((subCat: any) => (
                             <li
                               key={subCat._id}
                               onClick={() => handleCategorySelect(subCat._id)}
@@ -379,7 +384,7 @@ export default function ProductCategory() {
                             </li>
                           )) ||
                             activeCategories
-                              ?.filter(subCat => subCat.parentId === cat._id && subCat.isActive)
+                              ?.filter(subCat => subCat.parentId === cat._id && subCat.isActive && subCat.name)
                               ?.map((subCat: any) => (
                                 <li
                                   key={subCat._id}

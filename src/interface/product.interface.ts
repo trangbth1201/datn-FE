@@ -1,5 +1,5 @@
 export interface IProduct {
-  _id: string | number;
+  _id: string;
   name: string;
   slug: string;
   image: string[];
@@ -8,6 +8,7 @@ export interface IProduct {
   categoryId: string;
   categoryName: string;
   attributeName: string;
+  averageRating: number;
   description: string;
   attributes: IAttribute[];
   variation: IVariation[];
@@ -23,8 +24,8 @@ export interface IAttribute {
 }
 
 export interface IVariation {
-  _id: string | number;
-  attribute: IAttribute[];
+  _id: string;
+  attributes: IAttribute[];
   regularPrice: number;
   salePrice: number;
   stock: number;
