@@ -271,6 +271,7 @@ export const userGetOrder = async (
         },
       }
     );
+
     return {
       success: true,
       data: response.data
@@ -279,6 +280,30 @@ export const userGetOrder = async (
     return {
       success: false,
       message: error.response?.data?.message || "Không thể lấy danh sách đơn hàng",
+    };
+  }
+};
+
+export const cancelOrderApi = async (orderId: string, token: string) => {
+  try {
+    const res = await axios.patch(
+      `/order/status/${orderId}`, 
+      { status: "Đã hủy" },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    return {
+      success: true,
+      data: res.data,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.response?.data?.error || "Hủy đơn hàng thất bại",
     };
   }
 };
