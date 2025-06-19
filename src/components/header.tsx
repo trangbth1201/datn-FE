@@ -19,7 +19,22 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
-
+  const popoverContent = (
+    <div className="min-w-[180px]">
+      <p className="text-center ">
+        <a href="user/info" className="text-sm"> Thông tin tài khoản</a>
+      </p>
+       <p className="text-center">
+        <a href="user/order" className="text-sm"> Đơn hàng của tôi</a>
+      </p>
+       <p className="text-center">
+        <a href="user/changepassword" className="text-sm mb-4"> Đổi mật khẩu</a>
+      </p>
+      <p  className="text-sm  text-center" onClick={logout}>
+        Đăng xuất
+      </p>
+    </div>
+  );
 
   useEffect(() => {
     if (location.pathname !== "/") return; // Chỉ áp dụng trên trang chủ
@@ -75,13 +90,21 @@ const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
               <div className='header-icon'><a href=""><SearchOutlined /></a></div>
               <div className='header-icon'>
                 {user ? (
-                  <a href="/user/info"><Avatar
-                    size={30}
-                    src={user?.avatar || undefined}
-                    style={{ backgroundColor: "#7265e6", verticalAlign: "middle" }}
-                  >
-                    {!user?.avatar && user?.fullName?.charAt(0)?.toUpperCase()}
-                  </Avatar></a>
+                  <>
+                    <Popover
+                      content={popoverContent}
+                      trigger="click"
+                      className="cursor-pointer"
+                      placement="bottomRight">
+                      <Avatar
+                        size={30}
+                        src={user?.avatar || undefined}
+                        style={{ backgroundColor: "#7265e6", verticalAlign: "middle" }}
+                      >
+                        {!user?.avatar && user?.fullName?.charAt(0)?.toUpperCase()}
+                      </Avatar>
+                    </Popover>
+                  </>
                 ) : (
                   <a href="/login"><UserOutlined /></a>
                 )}
