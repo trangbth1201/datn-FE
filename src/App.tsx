@@ -17,7 +17,7 @@ import ProtectedRoute from "./auth/ProtectedRoute";
 import ChangePassword from "./pages/ChangePassword";
 import Order from "./pages/Order";
 import DetailOrder from "./pages/DetailOrder";
-import { SocketPage } from "./pages/SocketPage";
+// import { SocketPage } from "./pages/SocketPage";
 
 const App: React.FC = () => {
   return (
@@ -35,7 +35,7 @@ const App: React.FC = () => {
         {/* Blogs */}
         <Route path="blogs" element={<BlogCategory />} />
         <Route path="blogs/detail" element={<DetailBlog />} />
-        <Route path="socket" element={<SocketPage />} />
+        {/* <Route path="socket" element={<SocketPage />} /> */}
 
         {/* Protected Routes */}
         <Route path="user/info" element={<ProtectedRoute><UserInfo /></ProtectedRoute>} />

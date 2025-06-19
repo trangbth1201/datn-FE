@@ -13,6 +13,7 @@ import ImageSlide from "../assets/image/slideshow-1_1920x 1.jpg";
 import { useNavigate } from "react-router-dom";
 import { productService } from '../services/product.service';
 import { IProduct } from '../interface/product.interface';
+import { formatCurrency } from "../utils/function";
 
 const Home: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string>('1');
@@ -268,10 +269,10 @@ const Home: React.FC = () => {
                   </h3>
                   <div className="flex justify-between items-center">
                     <span className="text-red-500 font-bold">
-                      {product.variation && product.variation[0]?.salePrice.toLocaleString('vi-VN')}đ
+                      {formatCurrency(product.variation?.[0]?.salePrice || 0)}
                     </span>
                     <span className="text-gray-400 line-through">
-                      {product.variation && product.variation[0]?.regularPrice.toLocaleString('vi-VN')}đ
+                      {formatCurrency(product.variation?.[0]?.regularPrice || 0)}
                     </span>
                   </div>
                 </div>
@@ -357,10 +358,10 @@ const Home: React.FC = () => {
                   </h3>
                   <div className="flex justify-between items-center">
                     <span className="text-red-500 font-bold">
-                      {product.variation && product.variation[0]?.salePrice.toLocaleString('vi-VN')}đ
+                      {formatCurrency(product.variation?.[0]?.salePrice || 0)}
                     </span>
                     <span className="text-gray-400 line-through">
-                      {product.variation && product.variation[0]?.regularPrice.toLocaleString('vi-VN')}đ
+                      {formatCurrency(product.variation?.[0]?.regularPrice || 0)}
                     </span>
                   </div>
                 </div>

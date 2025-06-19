@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { IProduct, IVariation } from '../interface/product.interface';
 import { productService } from '../services/product.service';
+import { formatCurrency } from "../utils/function";
 
 const { Sider } = Layout;
 const { TabPane } = Tabs;
@@ -398,7 +399,7 @@ export default function DetailProduct() {
                           {product.name}
                         </h3>
                         <p className="mt-1 text-sm font-medium text-red-500">
-                          {product.variation?.[0]?.salePrice.toLocaleString('vi-VN')}đ
+                          {formatCurrency(product.variation?.[0]?.salePrice || 0)}
                         </p>
                       </div>
                     </div>

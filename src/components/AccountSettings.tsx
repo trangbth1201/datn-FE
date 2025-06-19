@@ -16,6 +16,7 @@ interface AccountForm {
 
 const AccountSettings: React.FC = () => {
   const { user, updateUser } = useAuth();
+  const [loading, setLoading] = useState(false)
   const [form, setForm] = useState<AccountForm>({
     fullName: user?.fullName ?? "",
     dob: "2004-01-12",
@@ -43,34 +44,48 @@ const AccountSettings: React.FC = () => {
       return;
     }
 
-    const res = await ChangeInfoUser(
-      user._id,
-      form.fullName,
-      form.phone,
-      form.address,
-      token
-    );
+    try {
+      setLoading(true);
 
-    if (res.success) {
-      updateUser({
-        fullName: form.fullName,
-        phone: form.phone,
-        address: form.address,
-      });
+      const res = await ChangeInfoUser(
+        user._id,
+        form.fullName,
+        form.phone,
+        form.address,
+        token
+      );
 
-      Swal.fire({
-        icon: "success",
-        title: "Cập nhật thành công",
-        text: "Thông tin người dùng đã được cập nhật.",
-      });
-    } else {
+      if (res.success) {
+        updateUser({
+          fullName: form.fullName,
+          phone: form.phone,
+          address: form.address,
+        });
+
+        Swal.fire({
+          icon: "success",
+          title: "Cập nhật thành công",
+          text: "Thông tin người dùng đã được cập nhật.",
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Cập nhật thất bại",
+          text: res.message || "Đã xảy ra lỗi khi cập nhật.",
+        });
+      }
+    } catch (error) {
+      console.error(error);
       Swal.fire({
         icon: "error",
-        title: "Cập nhật thất bại",
-        text: res.message || "Đã xảy ra lỗi khi cập nhật.",
+        title: "Lỗi hệ thống",
+        text: "Không thể kết nối đến máy chủ.",
       });
+    } finally {
+      setLoading(false);
     }
   };
+
 
   return (
     <>
@@ -168,7 +183,7 @@ const AccountSettings: React.FC = () => {
           </section>
         </main>
       </div>
-      <Loading text="Đang cập nhật thông tin ..."></Loading>
+      {loading ?? <Loading text="Đang cập nhật thông tin ..."></Loading> ?? ""}
     </>
   );
 };

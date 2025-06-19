@@ -46,8 +46,8 @@ const Footer: React.FC = () => {
             </div>
             <ul className="ul-reset ul-ft">
               {
-                about.map((item) => (
-                  <li><a href="">{item.name}</a></li>
+                about.map((item ,index) => (
+                  <li key={index}><a href="">{item.name}</a></li>
                 ))
               }
             </ul>

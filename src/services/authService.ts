@@ -10,8 +10,8 @@ interface User {
   avatar: string | null;
   role: string;
   isActive: boolean;
-  phone: string | null;       
-  address: string | null;  
+  phone: string | null;
+  address: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -256,6 +256,29 @@ export const userChangePass = async (
     return {
       success: false,
       message: error.response?.data?.message || "Lỗi khi đổi mật khẩu",
+    };
+  }
+};
+export const userGetOrder = async (
+  token: string
+) => {
+  try {
+    const response = await axios.get(
+      `/order/user/`, 
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return {
+      success: true,
+      data: response.data
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.response?.data?.message || "Không thể lấy danh sách đơn hàng",
     };
   }
 };

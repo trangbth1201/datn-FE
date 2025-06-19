@@ -42,16 +42,18 @@ const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
   }, [location.pathname]);
 
 
-  const popoverContent = (
-    <div className="min-w-[180px]">
-      <p className="font-semibold text-center">
-        <Link to={"user/info"}>Thông tin tài khoản</Link>
-      </p>
-      <Button type="text" danger block onClick={logout}>
-        Đăng xuất
-      </Button>
-    </div>
-  );
+  // const popoverContent = (
+  //   <div className="min-w-[180px]">
+  //     <p className="font-semibold text-center">
+  //       <Link className="block" to={"user/info"}>Thông tin tài khoản</Link>
+  //       <Link className="block" to={"user/order"}>Đơn hàng của tôi</Link>
+  //       <Link className="block" to={"user/changepassword"}>Đổi mật khẩu</Link>
+  //     </p>
+  //     <Button type="text" danger block onClick={logout}>
+  //       Đăng xuất
+  //     </Button>
+  //   </div>
+  // );
 
 
   return (
@@ -73,21 +75,16 @@ const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
               <div className='header-icon'><a href=""><SearchOutlined /></a></div>
               <div className='header-icon'>
                 {user ? (
-                  <Popover
-                    content={popoverContent}
-                    trigger="click"
-                    placement="bottomRight">
-                    <Avatar
-                      size={30}
-                      src={user?.avatar || undefined}
-                      style={{ backgroundColor: "#7265e6", verticalAlign: "middle" }}
-                    >
-                      {!user?.avatar && user?.fullName?.charAt(0)?.toUpperCase()}
-                    </Avatar>
-                  </Popover>
+                  <a href="/user/info"><Avatar
+                    size={30}
+                    src={user?.avatar || undefined}
+                    style={{ backgroundColor: "#7265e6", verticalAlign: "middle" }}
+                  >
+                    {!user?.avatar && user?.fullName?.charAt(0)?.toUpperCase()}
+                  </Avatar></a>
                 ) : (
-                <a href="/login"><UserOutlined /></a>
-            )}
+                  <a href="/login"><UserOutlined /></a>
+                )}
 
               </div>
 
