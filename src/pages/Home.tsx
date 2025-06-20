@@ -8,18 +8,15 @@ import image_1 from "../assets/image/footer-1.png";
 import image_2 from "../assets/image/footer-2.png";
 import image_3 from "../assets/image/footer-3.png";
 import thuml from "../assets/image/product-remove.png";
-import rectangle1 from "../assets/image/product.svg";
 import ImageSlide from "../assets/image/slideshow-1_1920x 1.jpg";
 import { useNavigate } from "react-router-dom";
 import { productService } from '../services/product.service';
 import { IProduct } from '../interface/product.interface';
-import { formatCurrency } from "../utils/function";
 
 const Home: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string>('1');
   const navigate = useNavigate();
 
-  // Query tất cả sản phẩm
   const { data, isLoading, error } = useQuery<{ docs: IProduct[] }>({
     queryKey: ['products'],
     queryFn: productService.getAllProducts,
@@ -27,28 +24,26 @@ const Home: React.FC = () => {
 
   const products = data?.docs || [];
 
-  // Lọc chỉ các sản phẩm có isActive = true
   const activeProducts = useMemo(() => {
     return products.filter(product => product.isActive);
   }, [products]);
 
-  // Lọc sản phẩm dựa theo selectedId từ các sản phẩm đã active
-  const filteredProducts = useMemo(() => {
+const filteredProducts = useMemo(() => {
     if (!activeProducts.length) return [];
 
-    return activeProducts.filter(product => {
-      if (selectedId === '2') {
-        // Sản phẩm mới - đã được lọc isActive ở trên
-        return true;
-      }
+    let filtered = activeProducts;
 
-      if (selectedId === '3') {
+    if (selectedId === '2') {
+      filtered = [...activeProducts].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    } else if (selectedId === '3') {
+      filtered = activeProducts.filter(product => {
         const variation = product.variation?.[0];
-        return variation?.salePrice < variation?.regularPrice;
-      }
-
-      return true;
-    });
+        return variation?.salePrice > 0 && variation.salePrice < variation?.regularPrice;
+      });
+    }
+    return filtered.slice(0, 12);
   }, [activeProducts, selectedId]);
 
   const handleCheckboxChange = (id: string) => {
@@ -97,36 +92,6 @@ const Home: React.FC = () => {
     position: "relative",
     cursor: "pointer",
   };
-
-  const articles = [
-    {
-      id: 1,
-      name: "Lorem ipsum dolor sit amet consectetuer adipiscing",
-      description:
-        "Lorem Ipsum is simply dummy text of the printing and typeset ting industry. Lorem Ipsum has been the industry's standard dummy ndustry's standard.",
-      image: rectangle1,
-      date: 25,
-      birth: "Tháng 1",
-    },
-    {
-      id: 2,
-      name: "Lorem ipsum dolor sit amet consectetuer adipiscing",
-      description:
-        "Lorem Ipsum is simply dummy text of the printing and typeset ting industry. Lorem Ipsum has been the industry's standard dummy ndustry's standard.",
-      image: rectangle1,
-      date: 25,
-      birth: "Tháng 1",
-    },
-    {
-      id: 3,
-      name: "Lorem ipsum dolor sit amet consectetuer adipiscing",
-      description:
-        "Lorem Ipsum is simply dummy text of the printing and typeset ting industry. Lorem Ipsum has been the industry's standard dummy ndustry's standard.",
-      image: rectangle1,
-      date: 25,
-      birth: "Tháng 1",
-    },
-  ];
 
   const marqImage = [
     {
@@ -234,50 +199,61 @@ const Home: React.FC = () => {
               Không có sản phẩm nào trong danh mục này
             </div>
           ) : (
-            filteredProducts.map((product: IProduct) => (
-              <div
-                key={product._id}
-                className="bg-white min-h-[300px] flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => {
-                  navigate(`/products/${product.slug}`);
-                }}
-              >
-                <div className="relative w-full aspect-square overflow-hidden">
-                  <img
-                    src={product.image[0] || "/placeholder.svg"}
-                    alt={product.name}
-                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                    loading="lazy"
-                  />
-                  <div className="absolute top-2 left-2 flex flex-col gap-1">
-                    {product.isActive && (
-                      <span className="m-0 text-xs px-2 py-0.5 rounded-bl-md rounded-tr-md text-white font-bold bg-green-600">
-                        MỚI
+            filteredProducts.map((product: IProduct) => {
+              const displayPrice = product.variation?.[0]?.salePrice > 0
+                ? product.variation[0].salePrice
+                : product.variation?.[0]?.regularPrice;
+              const showDiscount = product.variation?.[0]?.salePrice > 0 &&
+                product.variation[0].salePrice < product.variation[0].regularPrice;
+              const discountPercentage = showDiscount
+                ? Math.round((1 - product.variation[0].salePrice / product.variation[0].regularPrice) * 100)
+                : 0;
+              return (
+                <div
+                  key={product._id}
+                  className="bg-white min-h-[300px] flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => {
+                    navigate(`/products/${product.slug}`);
+                  }}
+                >
+                  <div className="relative w-full aspect-square overflow-hidden">
+                    <img
+                      src={product.image[0] || "/placeholder.svg"}
+                      alt={product.name}
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      loading="lazy"
+                    />
+                    <div className="absolute top-2 left-2 flex flex-col gap-1">
+                      {product.isActive && (
+                        <span className="m-0 text-xs px-2 py-0.5 rounded-bl-md rounded-tr-md text-white font-bold bg-green-600">
+                          MỚI
+                        </span>
+                      )}
+                      {showDiscount && (
+                        <span className="m-0 text-xs px-2 py-0.5 rounded-bl-md rounded-tr-md text-white font-bold bg-red-500">
+                          -{discountPercentage}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="text-sm font-medium mb-2 truncate">
+                      {product.name}
+                    </h3>
+                    <div className="flex justify-between items-center">
+                      <span className="text-red-500 font-bold">
+                        {displayPrice?.toLocaleString('vi-VN')}đ
                       </span>
-                    )}
-                    {product.variation && product.variation[0]?.salePrice < product.variation[0]?.regularPrice && (
-                      <span className="m-0 text-xs px-2 py-0.5 rounded-bl-md rounded-tr-md text-white font-bold bg-red-500">
-                        -{Math.round((1 - product.variation[0].salePrice / product.variation[0].regularPrice) * 100)}%
-                      </span>
-                    )}
+                      {showDiscount && (
+                        <span className="text-gray-400 line-through">
+                          {product.variation[0].regularPrice?.toLocaleString('vi-VN')}đ
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                <div className="p-4">
-                  <h3 className="text-sm font-medium mb-2 truncate">
-                    {product.name}
-                  </h3>
-                  <div className="flex justify-between items-center">
-                    <span className="text-red-500 font-bold">
-                      {formatCurrency(product.variation?.[0]?.salePrice || 0)}
-                    </span>
-                    <span className="text-gray-400 line-through">
-                      {formatCurrency(product.variation?.[0]?.regularPrice || 0)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
@@ -322,86 +298,67 @@ const Home: React.FC = () => {
             <div>Đang tải...</div>
           ) : error ? (
             <div className="text-red-500">Có lỗi xảy ra khi tải sản phẩm</div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="col-span-full text-center text-gray-500">
+              Không có sản phẩm nào trong danh mục này
+            </div>
           ) : (
-            activeProducts.map((product: any) => (
-              <div
-                key={product._id}
-                className="bg-white min-h-[300px] flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => {
-                  navigate(`/products/${product.slug}`);
-                }}
-              >
-                <div className="relative aspect-square w-full h-full overflow-hidden">
-                  <img
-                    src={product.image[0] || "/placeholder.svg"}
-                    alt={product.name}
-                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                    loading="lazy"
-                  />
-                  <div className="absolute top-2 left-2 flex flex-col gap-1">
-                    {product.isActive && (
-                      <span className="m-0 text-xs px-2 py-0.5 rounded-bl-md rounded-tr-md text-white font-bold bg-green-600">
-                        MỚI
+            filteredProducts.map((product: IProduct) => {
+              const displayPrice = product.variation?.[0]?.salePrice > 0
+                ? product.variation[0].salePrice
+                : product.variation?.[0]?.regularPrice;
+              const showDiscount = product.variation?.[0]?.salePrice > 0 &&
+                product.variation[0].salePrice < product.variation[0].regularPrice;
+              const discountPercentage = showDiscount
+                ? Math.round((1 - product.variation[0].salePrice / product.variation[0].regularPrice) * 100)
+                : 0;
+              return (
+                <div
+                  key={product._id}
+                  className="bg-white min-h-[300px] flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => {
+                    navigate(`/products/${product.slug}`);
+                  }}
+                >
+                  <div className="relative w-full aspect-square overflow-hidden">
+                    <img
+                      src={product.image[0] || "/placeholder.svg"}
+                      alt={product.name}
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      loading="lazy"
+                    />
+                    <div className="absolute top-2 left-2 flex flex-col gap-1">
+                      {product.isActive && (
+                        <span className="m-0 text-xs px-2 py-0.5 rounded-bl-md rounded-tr-md text-white font-bold bg-green-600">
+                          MỚI
+                        </span>
+                      )}
+                      {showDiscount && (
+                        <span className="m-0 text-xs px-2 py-0.5 rounded-bl-md rounded-tr-md text-white font-bold bg-red-500">
+                          -{discountPercentage}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="text-sm font-medium mb-2 truncate">
+                      {product.name}
+                    </h3>
+                    <div className="flex justify-between items-center">
+                      <span className="text-red-500 font-bold">
+                        {displayPrice?.toLocaleString('vi-VN')}đ
                       </span>
-                    )}
-                    {product.variation && product.variation[0]?.salePrice < product.variation[0]?.regularPrice && (
-                      <span className="m-0 text-xs px-2 py-0.5 rounded-bl-md rounded-tr-md text-white font-bold bg-red-500">
-                        -{Math.round((1 - product.variation[0]?.salePrice / product.variation[0].regularPrice) * 100)}%
-                      </span>
-                    )}
+                      {showDiscount && (
+                        <span className="text-gray-400 line-through">
+                          {product.variation[0].regularPrice?.toLocaleString('vi-VN')}đ
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                <div className="p-4">
-                  <h3 className="text-sm font-medium mb-2 truncate">
-                    {product.name}
-                  </h3>
-                  <div className="flex justify-between items-center">
-                    <span className="text-red-500 font-bold">
-                      {formatCurrency(product.variation?.[0]?.salePrice || 0)}
-                    </span>
-                    <span className="text-gray-400 line-through">
-                      {formatCurrency(product.variation?.[0]?.regularPrice || 0)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
-        </div>
-
-        {/* /Bai viet/ */}
-        <small
-          style={{
-            marginLeft: "8px",
-            color: "#cdcdcd",
-          }}
-          className="block small-title"
-        >
-          MỚI NHẤT
-        </small>
-        <label
-          className="block big-title"
-          style={{
-            marginLeft: "8px",
-            color: "black",
-          }}
-        >
-          BÀI VIẾT
-        </label>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 mb-10">
-          {articles.map((item) => (
-            <a href="" className="article">
-              <div className="caculate">
-                <p>{item.date}</p>
-                <span>{item.birth}</span>
-              </div>
-              <img src={item.image} alt="" />
-              <div className="article-title">{item.name}</div>
-              <div className="article-des">{item.description}</div>
-            </a>
-          ))}
         </div>
       </div>
       <Marquee>

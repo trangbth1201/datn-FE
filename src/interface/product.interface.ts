@@ -12,6 +12,8 @@ export interface IProduct {
   attributes: IAttribute[];
   variation: IVariation[];
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string; 
 }
 
 export interface IAttribute {
