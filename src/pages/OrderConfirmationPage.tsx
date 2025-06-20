@@ -3,8 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 
 const OrderConfirmationPage = () => {
   const { orderId } = useParams();
-
+const total = localStorage.getItem('totalAmount');
   useEffect(() => {
+    
     // Clear checkout data from localStorage
     localStorage.removeItem('shippingInfo');
     localStorage.removeItem('paymentMethod');
@@ -41,7 +42,7 @@ const OrderConfirmationPage = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Tổng tiền:</span>
-                <span className="font-medium text-lg">2,530,000₫</span>
+                <span className="font-medium text-lg">{total}₫</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Phương thức thanh toán:</span>

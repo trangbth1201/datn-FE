@@ -62,7 +62,7 @@ const OrderReview = () => {
         return savings;
       }, 0);
       
-      const shippingFee = 30000;
+      const shippingFee = 40000; // Cập nhật theo bản ghi mẫu
       const freeShippingThreshold = 500000;
       const finalShippingFee = subtotal >= freeShippingThreshold ? 0 : shippingFee;
       
@@ -208,14 +208,15 @@ const OrderReview = () => {
     return methodMap[method] || 'COD';
   };
 
-  // Chuẩn bị dữ liệu cho API theo đúng model schema
+  // Chuẩn bị dữ liệu cho API theo đúng model schema mới
   const prepareOrderData = () => {
     const orderCode = generateOrderCode();
     const discount = calculateDiscount();
     const total = calculateTotal();
-
-    // Chuẩn bị items theo format của orderItemSchema
+    localStorage.setItem("totalAmount", total);
+    // Chuẩn bị items theo format mới
     const items = orderSummary.items.map(item => ({
+      productId: item.productId,
       variationId: item.variantId,
       productName: item.name,
       quantity: item.quantity,
@@ -223,28 +224,44 @@ const OrderReview = () => {
       totalPrice: getItemPrice(item) * item.quantity
     }));
 
-    // Chuẩn bị shipping address theo đúng schema
-    const shippingAddress = {
-      country: 'Vietnam',
-      city: `${shippingInfo.wardName || shippingInfo.ward}, ${shippingInfo.districtName || shippingInfo.district}, ${shippingInfo.cityName || shippingInfo.city}`,
-      address: shippingInfo.address
+    // Chuẩn bị recipient info theo schema mới
+    const recipientInfo = {
+      name: shippingInfo.fullName,
+      email: shippingInfo.email,
+      phone: shippingInfo.phone
     };
+
+    // Chuẩn bị shipping address theo đúng schema mới
+    const shippingAddress = shippingInfo.address
 
     // Chuẩn bị voucherId array
     const voucherId = appliedVoucher ? [appliedVoucher._id] : [];
+    
+    // **THÊM CART ITEM IDS ĐỂ XÓA**
+    const cartItemIds = orderSummary.items
+      .map(item => item.cartItemId || item._id)
+      .filter(id => id); // Lọc bỏ undefined/null
+
     const user = localStorage.getItem('userId');
+
+    // Tính toán expected delivery date (7 ngày từ hiện tại)
+    const expectedDeliveryDate = new Date();
+    expectedDeliveryDate.setDate(expectedDeliveryDate.getDate() + 7);
 
     return {
       userId: user,
+      recipientInfo,
       orderCode,
       voucherId,
       shippingAddress,
       items,
+      cartItemIds, // **THÊM FIELD NÀY ĐỂ XÓA CART ITEMS**
       subtotal: orderSummary.subtotal,
       shippingFee: orderSummary.shippingFee,
       discountAmount: discount,
       totalAmount: total,
-      paymentMethod: mapPaymentMethod(paymentMethod)
+      paymentMethod: mapPaymentMethod(paymentMethod),
+      expectedDeliveryDate: expectedDeliveryDate.toISOString()
     };
   };
 
@@ -268,6 +285,11 @@ const OrderReview = () => {
       
       // Save order data for confirmation page
       localStorage.setItem('completedOrder', JSON.stringify(result));
+      
+      // Hiển thị thông báo thành công
+      if (result.cartItemsRemoved > 0) {
+        console.log(`Đã xóa ${result.cartItemsRemoved} sản phẩm khỏi giỏ hàng`);
+      }
       
       // Chuyển đến trang xác nhận với order code
       navigate(`/order/confirmation/${result.orderCode || orderData.orderCode}`);
@@ -321,10 +343,10 @@ const OrderReview = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            {/* Shipping Information */}
+            {/* Recipient Information - Cập nhật theo schema mới */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Thông tin giao hàng</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Thông tin người nhận</h2>
                 <button
                   onClick={() => navigate('/checkout')}
                   className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center"
@@ -349,10 +371,10 @@ const OrderReview = () => {
                   <p className="text-gray-500 mb-1">Email:</p>
                   <p className="font-medium">{shippingInfo.email}</p>
                 </div>
-                <div>
-                  <p className="text-gray-500 mb-1">Địa chỉ:</p>
+                <div className="md:col-span-2">
+                  <p className="text-gray-500 mb-1">Địa chỉ giao hàng:</p>
                   <p className="font-medium">
-                    {shippingInfo.address}, {shippingInfo.wardName || shippingInfo.ward}, {shippingInfo.districtName || shippingInfo.district}, {shippingInfo.cityName || shippingInfo.city}
+                    {shippingInfo.address}
                   </p>
                 </div>
                 {shippingInfo.note && (
@@ -464,7 +486,7 @@ const OrderReview = () => {
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Tóm tắt đơn hàng</h3>
               
-              {/* Voucher Section - Cập nhật theo dữ liệu mới */}
+              {/* Voucher Section */}
               <div className="border-b pb-4 mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-gray-700">Mã giảm giá</span>
@@ -621,7 +643,7 @@ const OrderReview = () => {
         </div>
       </div>
 
-      {/* Voucher Modal - Cập nhật theo dữ liệu mới */}
+      {/* Voucher Modal */}
       {showVoucherModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-96 overflow-y-auto">

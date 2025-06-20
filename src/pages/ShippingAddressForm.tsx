@@ -94,14 +94,14 @@ const ShippingAddressForm = () => {
   };
 
   const userAddress = getUserAddress();
-  console.log("User address data:", userAddress);
+  console.log("User address data:", userData);
   
 
   const [formData, setFormData] = useState({
     fullName: userData?.fullName || '',
     email: userData?.email || '',
     phone: userData?.phone || '',
-    address: userAddress.street || '',
+    address: userData?.address || '',
     city:userAddress.city || '',
     cityName: userAddress.city || '',
     district: '',
@@ -258,59 +258,59 @@ const ShippingAddressForm = () => {
   };
 
   // Xử lý khi chọn tỉnh/thành
-  const handleProvinceChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedCode = parseInt(e.target.value);
-    const selectedProvince = provinces.find(p => p.code === selectedCode);
-    console.log("Selected province:", selectedProvince);
-    setFormData({
-      ...formData,
-      city: selectedCode.toString(),
-      cityName: selectedProvince?.name || '',
-      district: '',
-      districtName: '',
-      ward: '',
-      wardName: ''
-    });
+  // const handleProvinceChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+  //   const selectedCode = parseInt(e.target.value);
+  //   const selectedProvince = provinces.find(p => p.code === selectedCode);
+  //   console.log("Selected province:", selectedProvince);
+  //   setFormData({
+  //     ...formData,
+  //     city: selectedCode.toString(),
+  //     cityName: selectedProvince?.name || '',
+  //     district: '',
+  //     districtName: '',
+  //     ward: '',
+  //     wardName: ''
+  //   });
 
-    setDistricts([]);
-    setWards([]);
+  //   setDistricts([]);
+  //   setWards([]);
 
-    if (selectedCode) {
-      await loadDistrictsForProvince(selectedCode);
-    }
-  };
+  //   if (selectedCode) {
+  //     await loadDistrictsForProvince(selectedCode);
+  //   }
+  // };
 
   // Xử lý khi chọn quận/huyện
-  const handleDistrictChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedCode = parseInt(e.target.value);
-    const selectedDistrict = districts.find(d => d.code === selectedCode);
-    console.log("Selected district:", selectedDistrict);
-    setFormData({
-      ...formData,
-      district: selectedCode.toString(),
-      districtName: selectedDistrict?.name || '',
-      ward: '',
-      wardName: ''
-    });
+  // const handleDistrictChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+  //   const selectedCode = parseInt(e.target.value);
+  //   const selectedDistrict = districts.find(d => d.code === selectedCode);
+  //   console.log("Selected district:", selectedDistrict);
+  //   setFormData({
+  //     ...formData,
+  //     district: selectedCode.toString(),
+  //     districtName: selectedDistrict?.name || '',
+  //     ward: '',
+  //     wardName: ''
+  //   });
 
-    setWards([]);
+  //   setWards([]);
 
-    if (selectedCode) {
-      await loadWardsForDistrict(selectedCode);
-    }
-  };
+  //   if (selectedCode) {
+  //     await loadWardsForDistrict(selectedCode);
+  //   }
+  // };
 
   // Xử lý khi chọn phường/xã
-  const handleWardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedCode = parseInt(e.target.value);
-    const selectedWard = wards.find(w => w.code === selectedCode);
-    console.log("Selected ward:", selectedWard);
-    setFormData({
-      ...formData,
-      ward: selectedCode.toString(),
-      wardName: selectedWard?.name || ''
-    });
-  };
+  // const handleWardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  //   const selectedCode = parseInt(e.target.value);
+  //   const selectedWard = wards.find(w => w.code === selectedCode);
+  //   console.log("Selected ward:", selectedWard);
+  //   setFormData({
+  //     ...formData,
+  //     ward: selectedCode.toString(),
+  //     wardName: selectedWard?.name || ''
+  //   });
+  // };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -318,13 +318,13 @@ const ShippingAddressForm = () => {
     
     try {
       // Validate required fields
-      const requiredFields = ['fullName', 'email', 'phone', 'address', 'city', 'district', 'ward'];
-      const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
+      // const requiredFields = ['fullName', 'email', 'phone', 'address', 'city', 'district', 'ward'];
+      // const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
       
-      if (missingFields.length > 0) {
-        alert(`Vui lòng điền đầy đủ thông tin: ${missingFields.join(', ')}`);
-        return;
-      }
+      // if (missingFields.length > 0) {
+      //   alert(`Vui lòng điền đầy đủ thông tin: ${missingFields.join(', ')}`);
+      //   return;
+      // }
 
       // Lưu thông tin shipping với đầy đủ dữ liệu
       const shippingData = {
@@ -568,87 +568,7 @@ const ShippingAddressForm = () => {
                 </div>
 
                 {/* Location Selection với auto-fill từ userData */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tỉnh/Thành phố *
-                    </label>
-                    <select
-                      name="city"
-                      value={formData.city}
-                      onChange={handleProvinceChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Chọn tỉnh/thành</option>
-                      {provinces.map((province) => (
-                        <option key={province.code} value={province.code}>
-                          {province.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Quận/Huyện *
-                    </label>
-                    <select
-                      name="district"
-                      value={formData.district}
-                      onChange={handleDistrictChange}
-                      required
-                      disabled={!formData.city || loadingDistricts}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                    >
-                      <option value="">
-                        {loadingDistricts ? 'Đang tải...' : 'Chọn quận/huyện'}
-                      </option>
-                      {districts.map((district) => (
-                        <option key={district.code} value={district.code}>
-                          {district.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phường/Xã *
-                    </label>
-                    <select
-                      name="ward"
-                      value={formData.ward}
-                      onChange={handleWardChange}
-                      required
-                      disabled={!formData.district || loadingWards}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                    >
-                      <option value="">
-                        {loadingWards ? 'Đang tải...' : 'Chọn phường/xã'}
-                      </option>
-                      {wards.map((ward) => (
-                        <option key={ward.code} value={ward.code}>
-                          {ward.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ghi chú đơn hàng
-                  </label>
-                  <textarea
-                    name="note"
-                    value={formData.note}
-                    onChange={handleInputChange}
-                    rows={3}
-                    placeholder="Ghi chú thêm cho đơn hàng (tùy chọn)..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
 
                 <div className="flex flex-col sm:flex-row justify-between gap-4 pt-6 border-t">
                   <button

@@ -12,6 +12,7 @@ export interface User {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  address: any;
 }
 
 export interface LoginResponse {
@@ -23,6 +24,11 @@ export interface LoginResponse {
 export const login = async (email: string, password: string): Promise<LoginResponse> => {
   try {
     const res = await axios.post<LoginResponse>("/login", { email, password });
+    localStorage.setItem("userId", res.data.user._id);
+    localStorage.setItem("user", JSON.stringify(res.data.user));
+    const user = localStorage.getItem("user");
+    console.log("User data:", JSON.parse(user || '{}').address);
+
     return res.data;
   } catch (err: any) {
     if (err.response?.data?.error) {
