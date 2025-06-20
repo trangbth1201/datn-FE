@@ -8,6 +8,7 @@ export const cartService = {
       const response = await axios.get(`${API_URL}/cart`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
+      localStorage.setItem('cartitem',response.data.cartItem)
       return response.data;
     } catch (error:any) {
       console.error('Lỗi khi tải giỏ hàng:', error.response?.data || error.message);
@@ -17,11 +18,11 @@ export const cartService = {
 
   addToCart: async (cartItem: { productId: string; variantId: string; quantity: number }) => {
     try {
-      console.log('Sending cartItem to add:', cartItem); // Log để debug
+      console.log('Sending cartItem to add:', cartItem);
       const response = await axios.post(`${API_URL}/cart`, cartItem, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
-      console.log('Add to cart response:', response.data); // Log phản hồi
+      console.log('Add to cart response:', response.data);
       return response.data;
     } catch (error:any) {
       console.error('Lỗi khi thêm sản phẩm vào giỏ hàng:', error.response?.data || error.message);
