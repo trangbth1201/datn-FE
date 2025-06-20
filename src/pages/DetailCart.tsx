@@ -18,7 +18,7 @@ const DetailCart = () => {
     if (cartData?.cart) {
       setCartItems(
         cartData.cart.map((item: any) => ({
-          id: item.productId,
+          id: `${item.productId}_${item.variantId}`,
           productId: item.productId,
           variantId: item.variantId || '',
           slug: item.product.slug || '',
@@ -31,6 +31,7 @@ const DetailCart = () => {
           quantity: item.quantity,
           stock: item.variant?.stock,
           selected: item.selected ?? true,
+          variantName: `${item.product.name} - ${item.variant?.attributes?.find((a: any) => a.attributeName === 'Màu sắc')?.values[0] || 'Màu mặc định'} / ${item.variant?.attributes?.find((a: any) => a.attributeName === 'Kích thước')?.values[0] || 'Size mặc định'}`,
         }))
       );
     }
@@ -54,7 +55,11 @@ const DetailCart = () => {
     setCartItems(items => items.map(i => i.id === itemId ? { ...i, quantity: maxQuantity } : i));
 
     try {
-      await cartService.updateCartQuantity({ productId: item.productId, variantId: item.variantId, quantity: maxQuantity });
+      await cartService.updateCartQuantity({ 
+        productId: item.productId, 
+        variantId: item.variantId, 
+        quantity: maxQuantity 
+      });
       await refetch();
     } catch (error) {
       console.error(error);
@@ -69,7 +74,10 @@ const DetailCart = () => {
 
     setCartItems(items => items.filter(i => i.id !== itemId));
     try {
-      await cartService.removeCart({ productId: item.productId, variantId: item.variantId });
+      await cartService.removeCart({ 
+        productId: item.productId, 
+        variantId: item.variantId 
+      });
       await refetch();
     } catch (error) {
       console.error(error);
@@ -83,12 +91,17 @@ const DetailCart = () => {
   const getSelectedSubtotal = () => getSelectedItems().reduce((total, item) => total + getItemTotal(item), 0);
   const getTotalSavings = () => getSelectedItems().reduce((savings, item) => item.salePrice > 0 ? savings + (item.regularPrice - item.salePrice) * item.quantity : savings, 0);
 
+  const getTotalItemCount = () => cartItems.reduce((total, item) => total + item.quantity, 0);
+  const getUniqueProductCount = () => {
+    const uniqueProducts = new Set(cartItems.map(item => item.productId));
+    return uniqueProducts.size;
+  };
+
   const shippingFee = 30000;
-  const freeShippingThreshold = 500000;
   const selectedItems = getSelectedItems();
   const selectedSubtotal = getSelectedSubtotal();
   const totalSavings = getTotalSavings();
-  const finalTotal = selectedSubtotal + (selectedSubtotal >= freeShippingThreshold ? 0 : shippingFee);
+  const finalTotal = selectedSubtotal + shippingFee;
 
   const handleCheckout = () => {
     if (!selectedItems.length) {
@@ -132,32 +145,15 @@ const DetailCart = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#8BC42D]">Giỏ hàng</h1>
           <p className="text-gray-600 mt-2">
-            Bạn có {cartItems.length} sản phẩm trong giỏ hàng
+            Bạn có {getTotalItemCount()} sản phẩm ({getUniqueProductCount()} loại sản phẩm, {cartItems.length} biến thể) trong giỏ hàng
             {selectedItems.length > 0 && (
-              <span className="ml-2 text-blue-600 font-medium">({selectedItems.length} sản phẩm được chọn)</span>
+              <span className="ml-2 text-blue-600 font-medium">({selectedItems.length} mục được chọn)</span>
             )}
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
-            {selectedSubtotal > 0 && selectedSubtotal < freeShippingThreshold && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-blue-900">
-                    Mua thêm {(freeShippingThreshold - selectedSubtotal).toLocaleString()}₫ để được miễn phí vận chuyển
-                  </span>
-                  <span className="text-xs text-blue-700">{Math.round((selectedSubtotal / freeShippingThreshold) * 100)}%</span>
-                </div>
-                <div className="w-full bg-blue-200 rounded-full h-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min((selectedSubtotal / freeShippingThreshold) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
             <div className="bg-white rounded-lg shadow-sm p-4">
               <label className="flex items-center space-x-3 cursor-pointer">
                 <input
@@ -166,7 +162,7 @@ const DetailCart = () => {
                   onChange={toggleSelectAll}
                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
-                <span className="font-medium text-gray-900">Chọn tất cả ({cartItems.length} sản phẩm)</span>
+                <span className="font-medium text-gray-900">Chọn tất cả ({cartItems.length} mục)</span>
               </label>
             </div>
 
@@ -187,12 +183,12 @@ const DetailCart = () => {
                       <Link to={`/products/${item.slug}`}>
                         <img
                           src={item.image}
-                          alt={item.name}
+                          alt={item.variantName}
                           className="w-24 h-24 object-cover rounded-md hover:opacity-75 transition-opacity"
                         />
                       </Link>
                     ) : (
-                      <img src={item.image} alt={item.name} className="w-24 h-24 object-cover rounded-md" />
+                      <img src={item.image} alt={item.variantName} className="w-24 h-24 object-cover rounded-md" />
                     )}
 
                     <div className="flex-1 min-w-0">
@@ -203,14 +199,20 @@ const DetailCart = () => {
                       ) : (
                         <span className="text-lg font-medium text-gray-900">{item.name}</span>
                       )}
+                      
                       <div className="mt-1 space-y-1">
-                        <p className="text-sm text-gray-500">Size: {item.size}</p>
+                        <p className="text-sm text-gray-500">
+                          <span className="font-medium">Size:</span> {item.size}
+                        </p>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-500">Màu:</span>
+                          <span className="text-sm text-gray-500 font-medium">Màu:</span>
                           <div className="w-4 h-4 rounded border border-gray-300" style={{ backgroundColor: item.color }} />
                         </div>
-                        <p className="text-sm text-gray-500">Còn lại: {item.stock} sản phẩm</p>
+                        <p className="text-sm text-gray-500">
+                          <span className="font-medium">Còn lại:</span> {item.stock} sản phẩm
+                        </p>
                       </div>
+                      
                       <div className="mt-2 flex items-center space-x-2">
                         <span className="text-lg font-semibold text-gray-900">{getItemPrice(item).toLocaleString()}₫</span>
                         {item.salePrice > 0 && (
@@ -280,7 +282,7 @@ const DetailCart = () => {
               ))}
             </div>
 
-            <Link to="/" className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+            <Link to="/products" className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
               </svg>
@@ -291,13 +293,13 @@ const DetailCart = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Tóm tắt đơn hàng {selectedItems.length > 0 && <span className="text-sm font-normal text-gray-500 ml-2">({selectedItems.length} sản phẩm)</span>}
+                Tóm tắt đơn hàng {selectedItems.length > 0 && <span className="text-sm font-normal text-gray-500 ml-2">({selectedItems.length} mục)</span>}
               </h3>
               {selectedItems.length ? (
                 <>
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
-                      <span>Tạm tính ({selectedItems.length} sản phẩm):</span>
+                      <span>Tạm tính ({selectedItems.length} mục):</span>
                       <span>{selectedSubtotal.toLocaleString()}₫</span>
                     </div>
                     {totalSavings > 0 && (
@@ -308,13 +310,7 @@ const DetailCart = () => {
                     )}
                     <div className="flex justify-between">
                       <span>Phí vận chuyển:</span>
-                      <span>
-                        {selectedSubtotal >= freeShippingThreshold ? (
-                          <span className="text-green-600 font-medium">Miễn phí</span>
-                        ) : (
-                          `${shippingFee.toLocaleString()}₫`
-                        )}
-                      </span>
+                      <span>{shippingFee.toLocaleString()}₫</span>
                     </div>
                     <div className="border-t pt-3 flex justify-between text-lg font-semibold">
                       <span>Tổng cộng:</span>

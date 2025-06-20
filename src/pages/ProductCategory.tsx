@@ -54,7 +54,7 @@ export default function ProductCategory() {
   }, [brandData]);
 
   const activeCategories = useMemo(() => {
-    return categoriesData?.docs.filter(category => category.isActive && category.name && category.slug !== 'danh-muc-khong-xac-dinh' && category.slug !== 'muc-khong-xac-inh') || [];
+    return categoriesData?.docs.filter(category => category.isActive && category.name && category.slug !== 'danh-muc-khong-xac-dinh') || [];
   }, [categoriesData]);
 
   const getIdFromSlug = (slug: string, type: 'brand' | 'category'): string => {

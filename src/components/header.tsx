@@ -19,7 +19,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
-
+  const cartItem = localStorage.getItem('cartitem') || '0';
 
   useEffect(() => {
     if (location.pathname !== "/") return; // Chỉ áp dụng trên trang chủ
@@ -73,7 +73,7 @@ const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
               <div className='header-icon'><a href=""><SearchOutlined /></a></div>
               
               <div className='header-icon'>
-                <a href="/cart" className='cart-icon' data-count="10">
+                <a href="/cart" className='cart-icon' data-count= {cartItem}>
                   <img src={Bag} className="bag-light" />
                   <img src={BagDark} className="bag-dark" />
                 </a>
