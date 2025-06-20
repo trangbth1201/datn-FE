@@ -3,6 +3,7 @@ import { Eye, EyeOff, Check, X } from "lucide-react";
 import Swal from "sweetalert2";
 import { SidebarLink } from "../components/SidebarLink";
 import { useAuth } from "../auth/AuthContext ";
+import { userChangePass } from "../services/authService";
 
 interface PasswordForm {
   current: string;
@@ -47,7 +48,7 @@ const getStrength = (pwd: string) => {
 };
 
 const ChangePassword: React.FC = () => {
-  const { user } = useAuth(); 
+  const { user } = useAuth();
   const [formData, setFormData] = useState<PasswordForm>({
     current: "",
     newPwd: "",
@@ -63,45 +64,6 @@ const ChangePassword: React.FC = () => {
   const toggleShow = (field: keyof typeof show) => () =>
     setShow((s) => ({ ...s, [field]: !s[field] }));
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Kiểm tra mật khẩu xác nhận có khớp không
-    if (formData.newPwd !== formData.confirm) {
-      Swal.fire({
-        title: "Lỗi",
-        text: "Mật khẩu xác nhận không khớp.",
-        icon: "error",
-      });
-      return;
-    }
-
-    try {
-      // Gọi API đổi mật khẩu (Giả sử có một API như ChangePassword)
-      const response = await ChangePassword(user?.email ?? "", formData.newPwd);
-      console.log(response)
-      //   if (response.success) {
-      //     Swal.fire({
-      //       title: "Thành công!",
-      //       text: response.message,
-      //       icon: "success",
-      //     });
-      //     resetForm();
-      //   } else {
-      //     Swal.fire({
-      //       title: "Lỗi",
-      //       text: response.message,
-      //       icon: "error",
-      //     });
-      //   }
-    } catch (error: any) {
-      Swal.fire({
-        title: "Lỗi",
-        text: error.message || "Đổi mật khẩu thất bại!",
-        icon: "error",
-      });
-    }
-  };
 
   const resetForm = () => {
     setFormData({
@@ -115,6 +77,31 @@ const ChangePassword: React.FC = () => {
       confirm: false,
     });
   };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!user) return;
+    const token = localStorage.getItem("token");
+
+    const res = await userChangePass(user._id, formData.current, formData.newPwd ,token ?? "");
+
+    if (res.success) {
+      Swal.fire({
+        icon: "success",
+        title: "Thành công",
+        text: "Mật khẩu đã được thay đổi!",
+      });
+      resetForm();
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "Thất bại",
+        text: res.message || "Không thể đổi mật khẩu",
+      });
+    }
+  };
+
 
   const strength = getStrength(formData.newPwd);
 

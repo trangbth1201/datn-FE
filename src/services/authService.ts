@@ -3,16 +3,19 @@ import axios from "axios";
 axios.defaults.baseURL = 'http://localhost:8080/api/';
 axios.defaults.withCredentials = true;
 
-export interface User {
+interface User {
   _id: string;
   fullName: string;
   email: string;
   avatar: string | null;
   role: string;
   isActive: boolean;
+  phone: string | null;
+  address: string | null;
   createdAt: string;
   updatedAt: string;
 }
+
 
 export interface LoginResponse {
   message: string;
@@ -143,9 +146,9 @@ export const verifyOtpToEmail = async (email: string, otp: string) => {
   }
 };
 
-export const resetPassword = async (email: string, newPassword: string ,confirmPassword :string ) => {
+export const resetPassword = async (email: string, newPassword: string, confirmPassword: string) => {
   try {
-    const response = await axios.post('/reset-password', { email, newPassword  ,confirmPassword});
+    const response = await axios.post('/reset-password', { email, newPassword, confirmPassword });
 
     if (response.status === 200) {
       return { success: true, message: 'Đặt lại mật khẩu thành công' };
@@ -162,5 +165,144 @@ export const resetPassword = async (email: string, newPassword: string ,confirmP
     } else {
       return { success: false, message: `Lỗi: ${error.message}` };
     }
+  }
+};
+
+export const ChangeInfoUser = async (
+  id: string,
+  fullName: string,
+  phone: string,
+  address: string,
+  token: string
+) => {
+  try {
+    const response = await axios.patch(
+      `/admin/users/edit/${id}`,
+      { fullName, phone, address },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (response.data.success) {
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message,
+      };
+    } else {
+      return {
+        success: false,
+        message: response.data.message,
+      };
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      message: "Lỗi khi cập nhật thông tin người dùng",
+      error: error.message,
+    };
+  }
+};
+
+export const getUserInfo = async (id: string) => {
+  try {
+    const response = await axios.get(`/admin/users/id/${id}`);
+
+    if (response.status === 200) {
+      return {
+        success: true,
+        data: response.data,
+      };
+    } else {
+      return {
+        success: false,
+        message: "Không thể lấy thông tin người dùng",
+      };
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      message: "Lỗi khi lấy thông tin người dùng",
+      error: error.message,
+    };
+  }
+};
+
+export const userChangePass = async (
+  id: string,
+  passwordOld: string,
+  passwordNew: string,
+  token: string
+) => {
+  try {
+    const response = await axios.patch(
+      `/admin/users/${id}/update-password`,
+      {
+        passwordOld,
+        passwordNew,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.response?.data?.message || "Lỗi khi đổi mật khẩu",
+    };
+  }
+};
+export const userGetOrder = async (
+  token: string
+) => {
+  try {
+    const response = await axios.get(
+      `/order/user/`, 
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    console.log(response.data)
+    return {
+      success: true,
+      data: response.data
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.response?.data?.message || "Không thể lấy danh sách đơn hàng",
+    };
+  }
+};
+
+export const cancelOrderApi = async (orderId: string, token: string) => {
+  try {
+    const res = await axios.put(
+      `/order/status/${orderId}`, 
+      { status: "Đã hủy" },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return {
+      success: true,
+      data: res.data,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.response?.data?.error || "Hủy đơn hàng thất bại",
+    };
   }
 };

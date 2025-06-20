@@ -25,7 +25,7 @@ const Login: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError(null); // reset lỗi cũ
+        setError(null); 
         try {
             const { accessToken, user } = await login(email, password);
             loginContext(accessToken, user);
