@@ -271,7 +271,7 @@ export const userGetOrder = async (
         },
       }
     );
-
+    console.log(response.data)
     return {
       success: true,
       data: response.data
@@ -286,7 +286,7 @@ export const userGetOrder = async (
 
 export const cancelOrderApi = async (orderId: string, token: string) => {
   try {
-    const res = await axios.patch(
+    const res = await axios.put(
       `/order/status/${orderId}`, 
       { status: "Đã hủy" },
       {
@@ -295,7 +295,6 @@ export const cancelOrderApi = async (orderId: string, token: string) => {
         },
       }
     );
-
     return {
       success: true,
       data: res.data,

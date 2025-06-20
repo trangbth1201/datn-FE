@@ -1,14 +1,13 @@
+// Giao diện đơn hàng kèm filter + thống kê + lựa chọn kiểu hiển thị (Card / Bảng)
+
 import React, { useEffect, useState } from "react";
-import { SidebarLink } from "../components/SidebarLink";
-import Box from '@mui/material/Box';
-import Tab from '@mui/material/Tab';
-import Tabs from '@mui/material/Tabs';
-import Typography from '@mui/material/Typography';
-import CircularProgress from '@mui/material/CircularProgress';
-import Alert from '@mui/material/Alert';
+import { Modal, Button as AntButton, Table, Tag, Input, Select, Radio } from "antd";
 import { cancelOrderApi, userGetOrder } from "../services/authService";
-import Button from "antd/es/button";
 import message from "antd/es/message";
+import { CheckCircle, Truck, Clock, PackageCheck, XCircle, List, LayoutGrid } from 'lucide-react';
+import { SidebarLink } from "../components/SidebarLink";
+
+const { Option } = Select;
 
 interface Order {
   _id: string;
@@ -34,282 +33,228 @@ interface OrderItem {
   _id: string;
   productName: string;
   quantity: number;
-  priceAtOrder: number;
   totalPrice: number;
-  variationId: string;
-  variantAttributes: any[];
 }
 
-const Order: React.FC = () => {
-  const [value, setValue] = React.useState(0);
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'cho xac nhan': return <Clock size={16} className="text-orange-600" />;
+    case 'da xac nhan': return <CheckCircle size={16} className="text-yellow-600" />;
+    case 'dang giao hang': return <Truck size={16} className="text-blue-600" />;
+    case 'da giao hang': return <PackageCheck size={16} className="text-green-600" />;
+    case 'thanh cong': return <CheckCircle size={16} className="text-green-700" />;
+    case 'da huy': return <XCircle size={16} className="text-red-500" />;
+    default: return null;
+  }
+};
+
+const OrderDashboard: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("Tất cả");
+  const [viewType, setViewType] = useState("table");
 
-  const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setValue(newValue);
-  };
-
-  const handleCancelOrder = async (orderId: string) => {
+  const fetchOrders = async () => {
     const token = localStorage.getItem("token");
-
-    if (!token) {
-      message.warning("Phiên đăng nhập đã hết hạn");
-      return;
-    }
-
-    const confirmCancel = window.confirm("Bạn có chắc muốn hủy đơn hàng này?");
-    if (!confirmCancel) return;
-
-    const res = await cancelOrderApi(orderId, token);
-
-    if (res.success) {
-      message.success("Đã hủy đơn hàng");
-      setOrders((prev) =>
-        prev.map((order) =>
-          order._id === orderId ? { ...order, status: "Đã hủy" } : order
-        )
-      );
-    } else {
-      message.error(res.message || "Có lỗi xảy ra");
-    }
+    const res = await userGetOrder(token || "");
+    if (res.success) setOrders(res.data);
+    else message.error("Không thể tải đơn hàng");
+    setLoading(false);
   };
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem("token");
-
-        const result = await userGetOrder(token as string);
-        if (result.success) {
-          setOrders(result.data || []);
-        } else {
-          setError(result.message);
-        }
-      } catch (err) {
-        setError("Không thể tải danh sách đơn hàng");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchOrders();
   }, []);
 
-  const getOrdersByStatus = (tabIndex: number) => {
-    const statusMap: { [key: number]: string } = {
-      0: 'Chờ xử lý',
-      1: 'Đang giao hàng',
-      2: 'Đã giao hàng',
-      3: 'Thành công',
-      4: 'Đã hủy'
-    };
+  const cancelOrder = async (id: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    const confirmed = window.confirm("Bạn có chắc muốn hủy đơn hàng?");
+    if (!confirmed) return;
 
-    return orders.filter(order => order.status === statusMap[tabIndex]);
+    const res = await cancelOrderApi(id, token);
+    if (res.success) {
+      message.success("Đã hủy đơn hàng");
+      fetchOrders();
+    } else {
+      message.error("Hủy thất bại");
+    }
   };
 
+  const filteredOrders = orders.filter((order) => {
+    const matchSearch =
+      order.orderCode.toLowerCase().includes(search.toLowerCase()) ||
+      order.items.some((item) => item.productName.toLowerCase().includes(search.toLowerCase()));
+
+    const matchStatus = statusFilter === "Tất cả" || order.status === statusFilter;
+
+    return matchSearch && matchStatus;
+  });
+
+  const totalAmount = orders.reduce((sum, o) => sum + o.totalAmount, 0);
+  const totalDiscount = orders.reduce((sum, o) => sum + o.discountAmount, 0);
+  const totalPending = orders.filter(o => o.status === 'Chờ xử lý').length;
+
+  const columns = [
+    {
+      title: "Mã đơn hàng",
+      dataIndex: "orderCode",
+      render: (text: string) => <strong>{text}</strong>,
+    },
+    {
+      title: "Ngày đặt",
+      dataIndex: "createdAt",
+      render: (text: string) => new Date(text).toLocaleDateString("vi-VN"),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      render: (text: string) => (
+        <span className="flex items-center gap-1">
+          {getStatusIcon(text)}
+          <Tag color="blue" style={{ marginLeft: 4 }}>{text}</Tag>
+        </span>
+      ),
+    },
+    {
+      title: "Sản phẩm",
+      dataIndex: "items",
+      render: (items: OrderItem[]) => `${items.length} sản phẩm`,
+    },
+    {
+      title: "Tổng tiền",
+      dataIndex: "totalAmount",
+      render: (amount: number) => (
+        <span className="text-red-600 font-medium">
+          {amount.toLocaleString("vi-VN")} ₫
+        </span>
+      ),
+    },
+    {
+      title: "Thao tác",
+      render: (_: any, record: Order) => (
+        <>
+          <AntButton
+            type="primary"
+            size="small"
+            onClick={() => setSelectedOrder(record)}
+            style={{ marginRight: 8 }}
+          >
+            Xem
+          </AntButton>
+          {record.status === 'Chờ xử lý' && (
+            <AntButton danger size="small" onClick={() => cancelOrder(record._id)}>
+              Hủy
+            </AntButton>
+          )}
+        </>
+      ),
+    },
+  ];
+
   return (
-    <div className="max-w-6xl mx-auto py-8 px-4 md:px-6 flex flex-col md:flex-row gap-8">
+    <div className="max-w-7xl mx-auto py-8 px-4 md:px-6 flex flex-col md:flex-row gap-8">
       <aside className="w-full md:w-56 space-y-3 mb-6 md:mb-0">
         <SidebarLink />
       </aside>
 
       <main className="flex-1">
-        <h1 className="text-2xl font-semibold mb-6">Danh sách đơn hàng</h1>
+        <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+          <div className="flex flex-wrap gap-4 items-center">
+            <Input placeholder="Nhập mã đơn hàng, sản phẩm..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full md:w-60" />
+            <Select value={statusFilter} onChange={setStatusFilter} className="w-full md:w-40">
+              <Option value="Tất cả">Tất cả</Option>
+              <Option value="cho xac nhan">Chờ xử lý</Option>
+              <Option value="da xac nhan">Đã xác nhận</Option>
+              <Option value="dang giao hang">Đang vận chuyển</Option>
+              <Option value="da giao hang">Đã giao hàng</Option>
+              <Option value="thanh cong">Thành công</Option>
+              <Option value="Da huy">Đã hủy</Option>
+            </Select>
+            <Radio.Group value={viewType} className="flex gap-3" onChange={(e) => setViewType(e.target.value)}>
+              <Radio.Button value="card" className="flex justify-center items-center"><LayoutGrid size={16} /></Radio.Button>
+              <Radio.Button value="table" className="flex justify-center items-center"><List size={16} /></Radio.Button>
+            </Radio.Group>
+          </div>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+            <div className="bg-gray-100 p-4 rounded text-center">
+              <div className="text-lg font-bold">{orders.length}</div>
+              <div className="text-sm text-gray-500">Tổng đơn hàng</div>
+            </div>
+            <div className="bg-gray-100 p-4 rounded text-center">
+              <div className="text-lg font-bold">{totalPending}</div>
+              <div className="text-sm text-gray-500">Chờ xử lý</div>
+            </div>
+            <div className="bg-gray-100 p-4 rounded text-center">
+              <div className="text-lg font-bold">{(totalAmount / 1e6).toFixed(1)}M</div>
+              <div className="text-sm text-gray-500">Tổng giá trị</div>
+            </div>
+            <div className="bg-gray-100 p-4 rounded text-center">
+              <div className="text-lg font-bold">{(totalDiscount / 1e6).toFixed(1)}M</div>
+              <div className="text-sm text-gray-500">Tiết kiệm</div>
+            </div>
+          </div>
+        </div>
+
+        {viewType === "table" ? (
+          <Table
+            rowKey="_id"
+            columns={columns}
+            dataSource={filteredOrders}
+            loading={loading}
+            pagination={{ pageSize: 10 , position: ["bottomCenter"] }}
+            bordered
+          />
+        ) : (
+          <div className="grid md:grid-cols-2 gap-4">
+            {filteredOrders.map((order) => (
+              <div key={order._id} className="p-4 border rounded shadow-sm bg-white">
+                <div className="flex justify-between">
+                  <strong>{order.orderCode}</strong>
+                  <Tag color="blue">{order.status}</Tag>
+                </div>
+                <p className="text-sm text-gray-500">Ngày đặt: {new Date(order.createdAt).toLocaleDateString("vi-VN")}</p>
+                <p className="font-medium text-red-600">{order.totalAmount.toLocaleString("vi-VN")} ₫</p>
+                <AntButton size="small" onClick={() => setSelectedOrder(order)} className="mt-2">Xem</AntButton>
+              </div>
+            ))}
+          </div>
         )}
 
-        <Box sx={{ width: '100%' }}>
-          <Tabs value={value} onChange={handleChange} aria-label="Order Tabs" sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tab label="Chờ xử lý" />
-            <Tab label="Đang giao hàng" />
-            <Tab label="Đã giao hàng" />
-            <Tab label="Thành công" />
-            <Tab label="Đã hủy" />
-          </Tabs>
-
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <>
-              <TabPanel value={value} index={0}>
-                <OrderList orders={getOrdersByStatus(0)} title="Đơn hàng chờ xử lý" onCancel={handleCancelOrder} />
-              </TabPanel>
-              <TabPanel value={value} index={1}>
-                <OrderList orders={getOrdersByStatus(1)} title="Đơn hàng đang giao" onCancel={handleCancelOrder} />
-              </TabPanel>
-              <TabPanel value={value} index={2}>
-                <OrderList orders={getOrdersByStatus(2)} title="Đơn hàng đã giao" onCancel={handleCancelOrder} />
-              </TabPanel>
-              <TabPanel value={value} index={3}>
-                <OrderList orders={getOrdersByStatus(3)} title="Đơn hàng thành công" onCancel={handleCancelOrder} />
-              </TabPanel>
-              <TabPanel value={value} index={4}>
-                <OrderList orders={getOrdersByStatus(4)} title="Đơn hàng đã hủy" onCancel={handleCancelOrder} />
-              </TabPanel>
-            </>
+        <Modal
+          open={!!selectedOrder}
+          onCancel={() => setSelectedOrder(null)}
+          title={`Chi tiết đơn hàng - ${selectedOrder?.orderCode}`}
+          footer={<AntButton onClick={() => setSelectedOrder(null)}>Đóng</AntButton>}
+        >
+          {selectedOrder && (
+            <div className="space-y-2 text-sm">
+              <p><strong>Trạng thái:</strong> {selectedOrder.status}</p>
+              <p><strong>Ngày đặt:</strong> {new Date(selectedOrder.createdAt).toLocaleString("vi-VN")}</p>
+              <p><strong>Thanh toán:</strong> {selectedOrder.paymentMethod} - {selectedOrder.paymentStatus}</p>
+              {selectedOrder.deliveryDate && <p><strong>Ngày giao dự kiến:</strong> {new Date(selectedOrder.deliveryDate).toLocaleDateString("vi-VN")}</p>}
+              <div>
+                <strong>Sản phẩm:</strong>
+                <ul className="list-disc ml-5">
+                  {selectedOrder.items.map(item => (
+                    <li key={item._id}>{item.productName} x {item.quantity} - {item.totalPrice.toLocaleString("vi-VN")} ₫</li>
+                  ))}
+                </ul>
+              </div>
+              <p><strong>Địa chỉ giao hàng:</strong> {selectedOrder.shippingAddress.address}, {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.country}</p>
+              <p><strong>Tạm tính:</strong> {selectedOrder.subtotal.toLocaleString("vi-VN")} ₫</p>
+              {selectedOrder.shippingFee > 0 && <p><strong>Phí vận chuyển:</strong> {selectedOrder.shippingFee.toLocaleString("vi-VN")} ₫</p>}
+              {selectedOrder.discountAmount > 0 && <p><strong>Giảm giá:</strong> -{selectedOrder.discountAmount.toLocaleString("vi-VN")} ₫</p>}
+              <p className="text-base font-medium"><strong>Tổng cộng:</strong> {selectedOrder.totalAmount.toLocaleString("vi-VN")} ₫</p>
+            </div>
           )}
-        </Box>
+        </Modal>
       </main>
     </div>
   );
 };
 
-interface OrderListProps {
-  orders: Order[];
-  title: string;
-  onCancel: (orderId: string) => void;
-}
-
-const OrderList: React.FC<OrderListProps> = ({ orders, title, onCancel }) => {
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-  if (orders.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <Typography variant="body1" color="text.secondary">
-          Không có đơn hàng nào
-        </Typography>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        {title} ({orders.length})
-      </Typography>
-
-      {orders.map((order) => (
-        <div key={order._id} className="border rounded-lg p-4 bg-white shadow-sm">
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <Typography variant="subtitle1" fontWeight="medium">
-                  {order.orderCode}
-                </Typography>
-                <span
-                  className={`px-2 py-1 rounded text-xs font-medium ${
-                    order.status === 'Chờ xử lý' ? 'bg-orange-100 text-orange-800' :
-                    order.status === 'Đang giao hàng' ? 'bg-blue-100 text-blue-800' :
-                    order.status === 'Đã giao hàng' ? 'bg-green-100 text-green-800' :
-                    order.status === 'Thành công' ? 'bg-green-100 text-green-800' :
-                    'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {order.status}
-                </span>
-              </div>
-              <Typography variant="body2" color="text.secondary">
-                Ngày đặt: {formatDate(order.createdAt)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Thanh toán: {order.paymentMethod} - {order.paymentStatus}
-              </Typography>
-              {order.deliveryDate && (
-                <Typography variant="body2" color="text.secondary">
-                  Ngày giao dự kiến: {formatDate(order.deliveryDate)}
-                </Typography>
-              )}
-            </div>
-            <div className="text-right">
-              <Typography variant="h6" color="primary">
-                {formatCurrency(order.totalAmount)}
-              </Typography>
-              {order.discountAmount > 0 && (
-                <Typography variant="body2" color="success.main">
-                  Giảm: {formatCurrency(order.discountAmount)}
-                </Typography>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-2 border-t pt-3">
-            <Typography variant="body2" fontWeight="medium" color="text.secondary">
-              Sản phẩm:
-            </Typography>
-            {order.items.map((item) => (
-              <div key={item._id} className="flex justify-between items-center text-sm">
-                <span className="flex-1">
-                  {item.productName} <span className="text-gray-500">x {item.quantity}</span>
-                </span>
-                <span className="font-medium">{formatCurrency(item.totalPrice)}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t pt-3 mt-3 space-y-1">
-            <div className="flex justify-between text-sm">
-              <span>Tạm tính:</span>
-              <span>{formatCurrency(order.subtotal)}</span>
-            </div>
-            {order.shippingFee > 0 && (
-              <div className="flex justify-between text-sm">
-                <span>Phí vận chuyển:</span>
-                <span>{formatCurrency(order.shippingFee)}</span>
-              </div>
-            )}
-            {order.discountAmount > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span>Giảm giá:</span>
-                <span>-{formatCurrency(order.discountAmount)}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-medium text-base border-t pt-1">
-              <span>Tổng cộng:</span>
-              <span className="text-primary">{formatCurrency(order.totalAmount)}</span>
-            </div>
-          </div>
-
-          <div className="border-t pt-3 mt-3">
-            <Typography variant="body2" fontWeight="medium" color="text.secondary">
-              Địa chỉ giao hàng:
-            </Typography>
-            <Typography variant="body2">
-              {order.shippingAddress.address}, {order.shippingAddress.city}, {order.shippingAddress.country}
-            </Typography>
-          </div>
-
-          {order.status === "Chờ xử lý" && (
-            <Button danger className="mt-3" onClick={() => onCancel(order._id)}>
-              Hủy đơn hàng
-            </Button>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-interface TabPanelProps {
-  value: number;
-  index: number;
-  children: React.ReactNode;
-}
-
-const TabPanel: React.FC<TabPanelProps> = ({ value, index, children }) => {
-  return (
-    <div role="tabpanel" hidden={value !== index} id={`simple-tabpanel-${index}`} aria-labelledby={`simple-tab-${index}`}>
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
-};
-
-export default Order;
+export default OrderDashboard;
