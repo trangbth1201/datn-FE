@@ -1,12 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
-import { User, Lock, Package } from "lucide-react"; 
+import { User, Lock, Package, OutdentIcon } from "lucide-react";
 import { ReactNode } from "react";
 
 interface SidebarLinkItemProps {
   to: string;
   label: string;
-  icon: ReactNode;  
-  active?: boolean; 
+  icon: ReactNode;
+  active?: boolean;
 }
 
 const SidebarLinkItem: React.FC<SidebarLinkItemProps> = ({
@@ -31,26 +31,26 @@ const SidebarLinkItem: React.FC<SidebarLinkItemProps> = ({
 
 
 export const SidebarLink: React.FC = () => {
-  const location = useLocation(); 
+  const location = useLocation();
 
   return (
     <>
       <SidebarLinkItem
         to="/user/info"
         label="Tài khoản"
-        icon={<User />} 
-        active={location.pathname === "/user/info"} 
+        icon={<User />}
+        active={location.pathname === "/user/info"}
       />
       <SidebarLinkItem
         to="/user/changepassword"
         label="Đổi mật khẩu"
-        icon={<Lock />}  
+        icon={<Lock />}
         active={location.pathname === "/user/changepassword"}
       />
       <SidebarLinkItem
         to="/user/order"
         label="Quản lý đơn hàng"
-        icon={<Package />}  
+        icon={<Package />}
         active={location.pathname === "/user/order"}
       />
     </>

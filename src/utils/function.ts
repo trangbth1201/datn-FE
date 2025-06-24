@@ -14,3 +14,19 @@ export const getPasswordStrength = (rules: ReturnType<typeof validatePasswordRul
   if (passed === 3) return "Trung bình";
   return "Mạnh";
 };
+
+
+export const formatCurrency = (amount?: number) => {
+  if (typeof amount !== 'number' || isNaN(amount)) return '0 ₫';
+
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    minimumFractionDigits: 0
+  }).format(amount);
+};
+
+
+export const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('vi-VN');
+};
