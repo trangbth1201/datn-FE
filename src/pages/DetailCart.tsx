@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Popconfirm } from 'antd';
+import { Popconfirm, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cartService } from '../services/cart.service';
@@ -50,15 +50,21 @@ const DetailCart = () => {
     if (newQuantity < 1) return;
     const item = cartItems.find(item => item.id === itemId);
     if (!item) return;
-    
-    const maxQuantity = Math.min(newQuantity, item.stock);
-    setCartItems(items => items.map(i => i.id === itemId ? { ...i, quantity: maxQuantity } : i));
+
+    let finalQuantity = newQuantity;
+
+    if (newQuantity > item.stock) {
+      finalQuantity = item.stock;
+      message.warning(`Sản phẩm "${item.name}" đã đạt số lượng tối đa (${item.stock} sản phẩm)`);
+    }
+
+    setCartItems(items => items.map(i => i.id === itemId ? { ...i, quantity: finalQuantity } : i));
 
     try {
-      await cartService.updateCartQuantity({ 
-        productId: item.productId, 
-        variantId: item.variantId, 
-        quantity: maxQuantity 
+      await cartService.updateCartQuantity({
+        productId: item.productId,
+        variantId: item.variantId,
+        quantity: finalQuantity
       });
       await refetch();
     } catch (error) {
@@ -68,15 +74,41 @@ const DetailCart = () => {
     }
   };
 
+  const handleQuantityInputChange = (itemId: string, inputValue: string) => {
+    const newQuantity = parseInt(inputValue) || 1;
+    updateQuantity(itemId, newQuantity);
+  };
+
+  const handleIncreaseQuantity = (itemId: string) => {
+    const item = cartItems.find(item => item.id === itemId);
+    if (!item || item.quantity >= item.stock) {
+      if (item) {
+        message.warning(`Sản phẩm "${item.name}" đã đạt số lượng tối đa (${item.stock} sản phẩm)`);
+      }
+      return;
+    }
+
+    updateQuantity(itemId, item.quantity + 1);
+  };
+
+  const handleDecreaseQuantity = (itemId: string) => {
+    const item = cartItems.find(item => item.id === itemId);
+    if (!item) return;
+
+    if (item.quantity > 1) {
+      updateQuantity(itemId, item.quantity - 1);
+    }
+  };
+
   const removeItem = async (itemId: string) => {
     const item = cartItems.find(item => item.id === itemId);
     if (!item) return;
 
     setCartItems(items => items.filter(i => i.id !== itemId));
     try {
-      await cartService.removeCart({ 
-        productId: item.productId, 
-        variantId: item.variantId 
+      await cartService.removeCart({
+        productId: item.productId,
+        variantId: item.variantId
       });
       await refetch();
     } catch (error) {
@@ -105,7 +137,7 @@ const DetailCart = () => {
 
   const handleCheckout = () => {
     if (!selectedItems.length) {
-      alert('Vui lòng chọn ít nhất một sản phẩm để thanh toán');
+      message.warning('Vui lòng chọn ít nhất một sản phẩm để thanh toán');
       return;
     }
     setIsLoading(true);
@@ -199,7 +231,7 @@ const DetailCart = () => {
                       ) : (
                         <span className="text-lg font-medium text-gray-900">{item.name}</span>
                       )}
-                      
+
                       <div className="mt-1 space-y-1">
                         <p className="text-sm text-gray-500">
                           <span className="font-medium">Size:</span> {item.size}
@@ -212,7 +244,7 @@ const DetailCart = () => {
                           <span className="font-medium">Còn lại:</span> {item.stock} sản phẩm
                         </p>
                       </div>
-                      
+
                       <div className="mt-2 flex items-center space-x-2">
                         <span className="text-lg font-semibold text-gray-900">{getItemPrice(item).toLocaleString()}₫</span>
                         {item.salePrice > 0 && (
@@ -227,7 +259,7 @@ const DetailCart = () => {
                     </div>
 
                     <div className="flex flex-col items-end space-y-4">
-                      <div className="flex items-center border border-gray-300 rounded-md">
+                      <div className="flex items-center border border-gray-300 rounded overflow-hidden w-fit">
                         {item.quantity <= 1 ? (
                           <Popconfirm
                             title="Bạn có chắc chắn muốn xóa sản phẩm này?"
@@ -236,31 +268,61 @@ const DetailCart = () => {
                             cancelText="Hủy"
                             okType="danger"
                           >
-                            <button className="p-2 hover:bg-gray-100">
+                            <button
+                              className="w-10 h-10 flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
+                            >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M20 12H4"
+                                />
                               </svg>
                             </button>
                           </Popconfirm>
                         ) : (
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="p-2 hover:bg-gray-100"
-                            disabled={item.quantity <= 1}
+                            onClick={() => handleDecreaseQuantity(item.id)}
+                            className="w-10 h-10 flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M20 12H4"
+                              />
                             </svg>
                           </button>
                         )}
-                        <span className="px-4 py-2 min-w-[60px] text-center font-medium">{item.quantity}</span>
+
+                        <input
+                          max={item.stock}
+                          value={item.quantity}
+                          onChange={(e) => handleQuantityInputChange(item.id, e.target.value)}
+                          className="w-12 h-10 text-center text-gray-600 font-semibold border-x border-gray-300 focus:outline-none"
+                          style={{
+                            borderLeftColor: '#D1D5DB',
+                            borderRightColor: '#D1D5DB',
+                            borderTopColor: '#F9FAFB',
+                            borderBottomColor: '#F9FAFB',
+                          }}
+                        />
+
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="p-2 hover:bg-gray-100"
+                          onClick={() => handleIncreaseQuantity(item.id)}
+                          className={`w-10 h-10 flex items-center justify-center text-gray-600 transition-colors ${item.quantity >= item.stock ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
+                            }`}
                           disabled={item.quantity >= item.stock}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                            />
                           </svg>
                         </button>
                       </div>
