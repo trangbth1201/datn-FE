@@ -17,7 +17,7 @@ export default function DetailProduct() {
   const queryClient = useQueryClient();
   const [color, setColor] = useState("");
   const [size, setSize] = useState("");
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState<number | string>(1);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [liked, setLiked] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -86,7 +86,7 @@ export default function DetailProduct() {
       );
       return colorMatch && sizeMatch;
     }) || firstActiveVariation;
-  }, [color, size, activeVariations, firstActiveVariation]);
+  }, [color, sizes, colors, activeVariations, firstActiveVariation]);
 
   const displayImages = useMemo(() => {
     const productImages = Array.isArray(product?.image) ? product.image : [];
@@ -136,14 +136,39 @@ export default function DetailProduct() {
     .slice(0, 3) || [];
 
   const handleQuantityChange = (type: 'increase' | 'decrease') => {
+    const currentQuantity = Number(quantity) || 1;
     if (type === 'increase') {
-      if (quantity < (selectedVariation?.stock || 1)) {
-        setQuantity(prev => prev + 1);
+      if (currentQuantity < (selectedVariation?.stock || 1)) {
+        setQuantity(currentQuantity + 1);
       }
     } else {
-      if (quantity > 1) {
-        setQuantity(prev => prev - 1);
+      if (currentQuantity > 1) {
+        setQuantity(currentQuantity - 1);
       }
+    }
+  };
+
+  const handleManualQuantityChange = (value: string) => {
+    if (value === '') {
+      setQuantity('');
+      return;
+    }
+
+    if (!/^\d+$/.test(value)) {
+      setQuantity(1);
+      message.warning('Vui lòng nhập số hợp lệ');
+      return;
+    }
+
+    const num = parseInt(value, 10);
+    if (num === 0) {
+      setQuantity(1);
+      message.warning('Số lượng tối thiểu là 1');
+    } else if (num > (selectedVariation?.stock || 1)) {
+      setQuantity(selectedVariation?.stock || 1);
+      message.warning(`Số lượng tối đa là ${selectedVariation?.stock}`);
+    } else {
+      setQuantity(num);
     }
   };
 
@@ -163,13 +188,13 @@ export default function DetailProduct() {
       await cartService.addToCart({
         productId: product!._id,
         variantId: selectedVariation?._id || firstActiveVariation?._id,
-        quantity,
+        quantity: Number(quantity),
       });
       message.success('Thêm vào giỏ hàng thành công!');
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     } catch (error) {
       console.error(error);
-      message.error('Thêm vào giỏ hàng thất bại!');
+      message.error('Thêm vào giỏ hàng không thành công!');
     }
   };
 
@@ -186,7 +211,7 @@ export default function DetailProduct() {
       await cartService.addToCart({
         productId: product!._id,
         variantId: selectedVariation?._id || firstActiveVariation?._id,
-        quantity,
+        quantity: Number(quantity),
       });
 
       const selectedProduct = {
@@ -201,7 +226,7 @@ export default function DetailProduct() {
         color: color,
         regularPrice: selectedVariation?.regularPrice || firstActiveVariation?.regularPrice,
         salePrice: selectedVariation?.salePrice || firstActiveVariation?.salePrice,
-        quantity: quantity,
+        quantity: Number(quantity),
         stock: selectedVariation?.stock || firstActiveVariation?.stock,
         selected: true,
       };
@@ -370,23 +395,34 @@ export default function DetailProduct() {
               <div className="mb-6">
                 <div className="font-semibold mb-2">SỐ LƯỢNG:</div>
                 <div className="flex items-center space-x-4">
-                  <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+                  <div className="flex items-center border border-gray-300 rounded overflow-hidden w-fit">
                     <button
                       type="button"
-                      className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-10 h-10 flex items-center justify-center text-gray-400 text-xl font-bold hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => handleQuantityChange('decrease')}
-                      disabled={quantity <= 1}
+                      disabled={Number(quantity) <= 1}
                     >
-                      -
+                      –
                     </button>
-                    <div className="w-16 h-10 flex items-center justify-center bg-white text-gray-800 font-semibold border-l border-r border-gray-300">
-                      {quantity}
-                    </div>
+                    <input
+                      value={quantity}
+                      onChange={(e) => handleManualQuantityChange(e.target.value)}
+                      onBlur={() => {
+                        if (quantity === '' || Number(quantity) < 1) {
+                          setQuantity(1);
+                        }
+                      }}
+                      className="w-12 h-10 text-center text-gray-600 font-semibold border-x border-gray-300 focus:outline-none"
+                      style={{ borderLeftColor: '#D1D5DB', borderRightColor: '#D1D5DB', borderTopColor: '#F9FAFB', borderBottomColor: '#F9FAFB' }}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={String(selectedVariation?.stock || 1).length}
+                    />
                     <button
                       type="button"
-                      className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-10 h-10 flex items-center justify-center text-gray-600 text-xl font-light hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => handleQuantityChange('increase')}
-                      disabled={quantity >= (selectedVariation?.stock || 1)}
+                      disabled={Number(quantity) >= (selectedVariation?.stock || 1)}
                     >
                       +
                     </button>
@@ -577,7 +613,7 @@ export default function DetailProduct() {
                 {filteredNewProducts.map(p => {
                   const price = p.variation?.[0]?.salePrice > 0
                     ? p.variation[0].salePrice
-                    : p.variation?.[0]?.regularPrice;
+                    : p.variation[0]?.regularPrice;
                   return (
                     <div
                       key={p._id}
@@ -589,11 +625,11 @@ export default function DetailProduct() {
                         alt={p.name}
                         className="w-16 h-16 object-cover rounded"
                       />
-                      <div className="flex-1">
+                      <div>
                         <h3 className="text-sm font-medium text-gray-900 truncate">
                           {p.name}
                         </h3>
-                        <p className="mt-1 text-sm font-medium text-red-500">
+                        <p className="text-sm font-medium text-red-500">
                           {price?.toLocaleString('vi-VN')}đ
                         </p>
                       </div>
@@ -615,7 +651,7 @@ export default function DetailProduct() {
                 <a
                   key={label}
                   href="#"
-                  className="px-2 py-1 border border-gray-300 rounded text-sm text-gray-600 hover:bg-gray-100"
+                  className="px-2 py-2 border border-gray-300 rounded text-sm text-gray-600 hover:bg-gray-100"
                 >
                   {label}
                 </a>
