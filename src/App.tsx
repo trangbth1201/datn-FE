@@ -22,6 +22,7 @@ import ShippingAddressForm from "./pages/ShippingAddressForm";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 import OrderReview from "./pages/OrderReview";
 import PaymentMethodSelection from "./pages/PaymentMethodSelection";
+import OrderDetail from "./pages/OrderDetail";
 
 const App: React.FC = () => {
   return (
@@ -48,7 +49,8 @@ const App: React.FC = () => {
           <Route path="/user/info" element={<ProtectedRoute>< UserInfo /></ProtectedRoute>} />
           <Route path="/user/changepassword" element={<ProtectedRoute>< ChangePassword /></ProtectedRoute>} />
           <Route path="/user/order" element={<ProtectedRoute>< Order /></ProtectedRoute>} />
-          
+          <Route path="/order/:orderId" element={<ProtectedRoute>< OrderDetail /></ProtectedRoute>} />
+
         </Route>
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
