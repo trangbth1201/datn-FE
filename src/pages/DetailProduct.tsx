@@ -3,7 +3,7 @@ import { Spin, Button, Image, Layout, Rate, Tabs, message, Radio } from "antd";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { IProduct, IVariation } from '../interface/product.interface';
+import { IProduct, IVariation, IAttribute } from '../interface/product.interface';
 import { productService } from '../services/product.service';
 import { cartService } from '../services/cart.service';
 import { useAuth } from '../auth/AuthContext ';
@@ -15,8 +15,7 @@ export default function DetailProduct() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [color, setColor] = useState("");
-  const [size, setSize] = useState("");
+  const [selectedAttributes, setSelectedAttributes] = useState<{ [key: string]: string }>({});
   const [quantity, setQuantity] = useState<number | string>(1);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [liked, setLiked] = useState(false);
@@ -27,6 +26,30 @@ export default function DetailProduct() {
     queryKey: ['product', slug],
     queryFn: () => productService.getProductBySlug(slug!),
     enabled: !!slug,
+  });
+
+  const { data: attributes, isLoading: isLoadingAttributes } = useQuery<IAttribute[]>({
+    queryKey: ['attributes', product?._id],
+    queryFn: () => {
+      const allAttributes = product?.variation?.flatMap(v => v.attributes || []) || [];
+      const uniqueAttributes: IAttribute[] = [];
+      const attributeMap = new Map<string, Set<string>>();
+
+      allAttributes.forEach(attr => {
+        if (!attributeMap.has(attr.attributeName)) {
+          attributeMap.set(attr.attributeName, new Set(attr.values));
+        } else {
+          attr.values.forEach(value => attributeMap.get(attr.attributeName)!.add(value));
+        }
+      });
+
+      attributeMap.forEach((values, attributeName) => {
+        uniqueAttributes.push({ attributeName, values: Array.from(values) });
+      });
+
+      return uniqueAttributes;
+    },
+    enabled: !!product?._id,
   });
 
   const { data: relatedProducts, isLoading: isLoadingRelated } = useQuery<{ docs: IProduct[] }>({
@@ -43,8 +66,7 @@ export default function DetailProduct() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
     setSelectedImageIndex(0);
-    setColor("");
-    setSize("");
+    setSelectedAttributes({});
     setQuantity(1);
   }, [slug]);
 
@@ -58,35 +80,21 @@ export default function DetailProduct() {
   const maxPrice = Math.max(...activeVariations.map(v => v.salePrice > 0 ? v.salePrice : v.regularPrice));
   const firstActiveVariation = activeVariations[0];
 
-  const colors = [...new Set(activeVariations
-    .filter(v => v.stock > 0)
-    .flatMap(v => v.attributes?.find(a => a.attributeName === "Màu sắc")?.values || []))];
-
-  const sizes = [...new Set(activeVariations
-    .filter(v => v.stock > 0)
-    .flatMap(v => v.attributes?.find(a => a.attributeName === "Kích thước")?.values || []))];
-
   const selectedVariation = useMemo(() => {
-    if (!color && !size) return firstActiveVariation;
+    if (Object.keys(selectedAttributes).length === 0) return firstActiveVariation;
 
     return activeVariations.find(v => {
-      const colorMatch = !color || v.attributes?.some(a =>
-        a.attributeName === "Màu sắc" && a.values.includes(color)
-      );
-      const sizeMatch = !size || v.attributes?.some(a =>
-        a.attributeName === "Kích thước" && a.values.includes(size)
-      );
-      return colorMatch && sizeMatch && v.stock > 0;
+      return Object.entries(selectedAttributes).every(([attrName, attrValue]) => {
+        const variationAttr = v.attributes?.find(a => a.attributeName === attrName);
+        return variationAttr?.values.includes(attrValue);
+      }) && v.stock > 0;
     }) || activeVariations.find(v => {
-      const colorMatch = !color || v.attributes?.some(a =>
-        a.attributeName === "Màu sắc" && a.values.includes(color)
-      );
-      const sizeMatch = !size || v.attributes?.some(a =>
-        a.attributeName === "Kích thước" && a.values.includes(size)
-      );
-      return colorMatch && sizeMatch;
+      return Object.entries(selectedAttributes).every(([attrName, attrValue]) => {
+        const variationAttr = v.attributes?.find(a => a.attributeName === attrName);
+        return variationAttr?.values.includes(attrValue);
+      });
     }) || firstActiveVariation;
-  }, [color, sizes, colors, activeVariations, firstActiveVariation]);
+  }, [selectedAttributes, activeVariations, firstActiveVariation]);
 
   const displayImages = useMemo(() => {
     const productImages = Array.isArray(product?.image) ? product.image : [];
@@ -104,7 +112,7 @@ export default function DetailProduct() {
   }, [product?.image, activeVariations]);
 
   const mainImage = useMemo(() => {
-    if (color && selectedVariation) {
+    if (Object.keys(selectedAttributes).length > 0 && selectedVariation) {
       const selectedVariantImages = Array.isArray(selectedVariation.image)
         ? selectedVariation.image
         : [selectedVariation.image].filter(Boolean);
@@ -115,13 +123,23 @@ export default function DetailProduct() {
     }
 
     return displayImages[selectedImageIndex] || displayImages[0];
-  }, [color, selectedVariation, displayImages, selectedImageIndex]);
+  }, [selectedAttributes, selectedVariation, displayImages, selectedImageIndex]);
 
   useEffect(() => {
-    if (color) {
+    if (Object.keys(selectedAttributes).length > 0 && selectedVariation) {
+      const selectedVariantImages = Array.isArray(selectedVariation.image)
+        ? selectedVariation.image
+        : [selectedVariation.image].filter(Boolean);
+      if (selectedVariantImages.length > 0) {
+        const mainImageIndex = displayImages.indexOf(selectedVariantImages[0]);
+        if (mainImageIndex !== -1) {
+          setSelectedImageIndex(mainImageIndex);
+        }
+      }
+    } else {
       setSelectedImageIndex(0);
     }
-  }, [color]);
+  }, [selectedAttributes, selectedVariation, displayImages]);
 
   const price = selectedVariation?.salePrice > 0 ? selectedVariation.salePrice : selectedVariation?.regularPrice;
   const inStock = activeVariations.some(v => v.stock > 0);
@@ -172,7 +190,7 @@ export default function DetailProduct() {
     }
   };
 
-  const handleThumbnailClick = (_img: string, index: number) => {
+  const handleThumbnailClick = (img: string, index: number) => {
     setSelectedImageIndex(index);
   };
 
@@ -181,7 +199,9 @@ export default function DetailProduct() {
       message.warning('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
       return navigate('/login');
     }
-    if (!size || !color) return message.error('Vui lòng chọn màu sắc và kích thước');
+    if (Object.keys(selectedAttributes).length !== attributes?.length) {
+      return message.error('Vui lòng chọn đầy đủ các thuộc tính');
+    }
     if (!stock) return message.error('Sản phẩm đã hết hàng!');
 
     try {
@@ -203,7 +223,9 @@ export default function DetailProduct() {
       message.warning('Vui lòng đăng nhập để mua hàng');
       return navigate('/login');
     }
-    if (!size || !color) return message.error('Vui lòng chọn màu sắc và kích thước');
+    if (Object.keys(selectedAttributes).length !== attributes?.length) {
+      return message.error('Vui lòng chọn đầy đủ các thuộc tính');
+    }
     if (!stock) return message.error('Sản phẩm đã hết hàng!');
 
     setIsBuyingNow(true);
@@ -220,10 +242,10 @@ export default function DetailProduct() {
         variantId: selectedVariation?._id || firstActiveVariation?._id,
         slug: product!.slug,
         name: product!.name,
-        variantName: `${product!.name} - ${color} / ${size}`,
+        variantName: `${product!.name} - ${Object.entries(selectedAttributes).map(([k, v]) => `${k}: ${v}`).join(' / ')}`,
         image: selectedVariation?.image || product!.image[0],
-        size: size,
-        color: color,
+        size: selectedAttributes['Kích Thước'] || '',
+        color: selectedAttributes['Màu sắc'] || '',
         regularPrice: selectedVariation?.regularPrice || firstActiveVariation?.regularPrice,
         salePrice: selectedVariation?.salePrice || firstActiveVariation?.salePrice,
         quantity: Number(quantity),
@@ -244,7 +266,7 @@ export default function DetailProduct() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingAttributes) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <Spin size="large" tip="Đang tải sản phẩm..." />
@@ -252,7 +274,7 @@ export default function DetailProduct() {
     );
   }
 
-  if (!product) {
+  if (!product || !attributes) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <div className="text-center">
@@ -286,7 +308,7 @@ export default function DetailProduct() {
                   <div className="overflow-x-auto">
                     <div className="flex gap-4 pb-2" style={{ width: `${displayImages.length * 80}px` }}>
                       {displayImages.map((img, i) => {
-                        const isSelected = img === mainImage;
+                        const isSelected = i === selectedImageIndex;
                         return (
                           <button
                             key={i}
@@ -309,7 +331,7 @@ export default function DetailProduct() {
                 ) : (
                   <div className="grid grid-cols-4 gap-4">
                     {displayImages.map((img, i) => {
-                      const isSelected = img === mainImage;
+                      const isSelected = i === selectedImageIndex;
                       return (
                         <button
                           key={i}
@@ -335,7 +357,7 @@ export default function DetailProduct() {
               <h1 className="text-2xl font-bold mb-2">{product?.name}</h1>
               <Rate disabled value={product?.averageRating || 0} className="mb-4" />
               <div className="text-3xl font-bold mb-4" style={{ color: '#8BC42D' }}>
-                {(!color && !size) && minPrice && maxPrice && minPrice !== maxPrice ? (
+                {Object.keys(selectedAttributes).length === 0 && minPrice && maxPrice && minPrice !== maxPrice ? (
                   <span>
                     {minPrice.toLocaleString('vi-VN')}đ - {maxPrice.toLocaleString('vi-VN')}đ
                   </span>
@@ -350,48 +372,52 @@ export default function DetailProduct() {
                 <div><strong>Danh mục:</strong> {product?.categoryName}</div>
                 <div><strong>Thương hiệu:</strong> {product?.brandName}</div>
               </div>
-              <div className="mb-6">
-                <div className="font-semibold mb-2">MÀU:</div>
-                <div className="flex gap-3">
-                  {colors.map(c => {
-                    const isSelected = color === c;
-                    return (
-                      <div
-                        key={c}
-                        className={`w-8 h-8 rounded-full cursor-pointer border-2 transition-all duration-200 ${isSelected
-                          ? 'ring-2 ring-yellow-500 border-yellow-500 scale-110'
-                          : 'border-gray-300 hover:border-yellow-400 hover:scale-105'
-                          }`}
-                        style={{ background: c }}
-                        onClick={() => {
-                          setColor(prev => (prev === c ? "" : c));
-                          setSize("");
-                        }}
-                      />
-                    );
-                  })}
+              {attributes?.map(attr => (
+                <div key={attr.attributeName} className="mb-6">
+                  <div className="font-semibold mb-2">
+                    {attr.attributeName === "Test Color" ? "Màu sắc:" : attr.attributeName === "Test Kích Thước" ? "Kích thước:" : attr.attributeName.toUpperCase() + ":"}
+                  </div>
+                  <div className="flex gap-3 flex-wrap">
+                    {attr.values.map(value => {
+                      const isSelected = selectedAttributes[attr.attributeName] === value;
+                      const isColor = attr.attributeName.toLowerCase().includes('màu') || attr.attributeName.toLowerCase().includes('color');
+                      return isColor ? (
+                        <div
+                          key={value}
+                          className={`w-8 h-8 rounded-full cursor-pointer border-2 transition-all duration-200 ${isSelected
+                            ? 'ring-2 ring-yellow-500 border-yellow-500 scale-110'
+                            : 'border-gray-300 hover:border-yellow-400 hover:scale-105'
+                            }`}
+                          style={{ background: value }}
+                          onClick={() => {
+                            setSelectedAttributes(prev => ({
+                              ...prev,
+                              [attr.attributeName]: prev[attr.attributeName] === value ? '' : value,
+                            }));
+                          }}
+                        />
+                      ) : (
+                        <Radio.Button
+                          key={value}
+                          value={value}
+                          className={`min-w-[60px] text-center transition-all duration-200 ${isSelected
+                            ? 'border-2 border-yellow-500 hover:border-yellow-500'
+                            : 'border-gray-300 hover:border-yellow-400'
+                            }`}
+                          onClick={() => {
+                            setSelectedAttributes(prev => ({
+                              ...prev,
+                              [attr.attributeName]: prev[attr.attributeName] === value ? '' : value,
+                            }));
+                          }}
+                        >
+                          {value}
+                        </Radio.Button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-              <div className="mb-6">
-                <div className="font-semibold mb-2">SIZE:</div>
-                <Radio.Group value={size} className="flex gap-3 flex-wrap">
-                  {sizes.map(s => {
-                    return (
-                      <Radio.Button
-                        key={s}
-                        value={s}
-                        className="min-w-[60px] text-center hover:border-yellow-400 transition-all duration-200"
-                        onClick={() => {
-                          setSize(prev => (prev === s ? "" : s));
-                        }}
-                      >
-                        {s}
-                      </Radio.Button>
-                    );
-                  })}
-                </Radio.Group>
-              </div>
-
+              ))}
               <div className="mb-6">
                 <div className="font-semibold mb-2">SỐ LƯỢNG:</div>
                 <div className="flex items-center space-x-4">
@@ -432,7 +458,6 @@ export default function DetailProduct() {
                   </span>
                 </div>
               </div>
-
               <div className="flex items-center gap-4 mb-6">
                 <Button
                   size="large"
@@ -447,25 +472,23 @@ export default function DetailProduct() {
                   className="border border-gray-300 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center bg-white hover:bg-gray-50"
                   onClick={() => setLiked(!liked)}
                 />
-
                 <Button
                   type="primary"
                   size="large"
                   icon={<ShoppingCartOutlined style={{ fontSize: "24px" }} />}
                   className="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center px-6 h-16 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleAddToCart}
-                  disabled={!stock || !color || !size}
+                  disabled={!stock || Object.keys(selectedAttributes).length !== attributes?.length}
                 >
                   Thêm vào giỏ
                 </Button>
-
                 <Button
                   type="primary"
                   size="large"
                   icon={<ShoppingOutlined style={{ fontSize: "24px" }} />}
                   className="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center px-6 h-16 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleBuyNow}
-                  disabled={!stock || !color || !size || isBuyingNow}
+                  disabled={!stock || Object.keys(selectedAttributes).length !== attributes?.length || isBuyingNow}
                   loading={isBuyingNow}
                 >
                   {isBuyingNow ? 'Đang xử lý...' : 'Mua ngay'}
@@ -481,7 +504,6 @@ export default function DetailProduct() {
               </div>
             </div>
           </div>
-
           <Tabs defaultActiveKey="1" centered className="mt-12">
             <Tabs.TabPane tab="MÔ TẢ" key="1">
               <div className="mt-4 text-gray-700 space-y-6 text-justify">
@@ -501,7 +523,6 @@ export default function DetailProduct() {
               <p className="mt-4 text-gray-700">Chưa có nhận xét nào.</p>
             </Tabs.TabPane>
           </Tabs>
-
           <div className="mt-16">
             <h2 className="text-2xl font-bold mb-6 border-b-2 border-orange-400 inline-block pb-2">
               Sản phẩm cùng danh mục
@@ -566,7 +587,6 @@ export default function DetailProduct() {
             )}
           </div>
         </div>
-
         <Sider width={250} className="bg-white p-4">
           <div className="mb-6 bg-gray-100 p-5">
             <h2 className="text-base font-bold uppercase">THƯ MỤC</h2>
@@ -593,7 +613,6 @@ export default function DetailProduct() {
               })}
             </ul>
           </div>
-
           <div className="mb-6">
             <h2 className="text-base font-bold mb-4">Các sản phẩm mới ra mắt</h2>
             <div className="relative mb-4">
@@ -639,7 +658,6 @@ export default function DetailProduct() {
               </div>
             )}
           </div>
-
           <div>
             <h2 className="text-base font-bold mb-4 uppercase">TỪ KHÓA</h2>
             <div className="relative mb-4">

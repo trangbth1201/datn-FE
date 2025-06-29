@@ -18,7 +18,6 @@ export interface IProduct {
 }
 
 export interface IAttribute {
-  attributeId: string;
   attributeName: string;
   values: string[];
 }
