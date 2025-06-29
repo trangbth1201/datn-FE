@@ -1,14 +1,13 @@
 import React, { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import Logo from '../assets/image/logo.png';
-import Bag from '../assets/image/bag.svg';
 import BagDark from '../assets/image/bag-dark.svg';
+import Bag from '../assets/image/bag.svg';
+import Logo from '../assets/image/logo.png';
 
 import { SearchOutlined, UserOutlined } from "@ant-design/icons";
 import { useAuth } from "../auth/AuthContext ";
 
 import Avatar from "antd/es/avatar";
-import Button from "antd/es/button";
 import Popover from "antd/es/popover";
 
 interface HeaderProps {
@@ -22,13 +21,13 @@ const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
   const popoverContent = (
     <div className="min-w-[180px]">
       <p className="text-center ">
-        <a href="user/info" className="text-sm"> Thông tin tài khoản</a>
+        <a href="../user/info" className="text-sm"> Thông tin tài khoản</a>
       </p>
        <p className="text-center">
-        <a href="user/order" className="text-sm"> Đơn hàng của tôi</a>
+        <a href="../user/order" className="text-sm"> Đơn hàng của tôi</a>
       </p>
        <p className="text-center">
-        <a href="user/changepassword" className="text-sm mb-4"> Đổi mật khẩu</a>
+        <a href="../user/changepassword" className="text-sm mb-4"> Đổi mật khẩu</a>
       </p>
       <p  className="text-sm  text-center" onClick={logout}>
         Đăng xuất
