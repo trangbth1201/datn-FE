@@ -28,6 +28,7 @@ export const login = async (
 ): Promise<LoginResponse> => {
   try {
     const res = await axios.post<LoginResponse>("/login", { email, password });
+    localStorage.setItem("userId", res.data.user._id);
     return res.data;
   } catch (err: any) {
     if (err.response?.data?.error) {
@@ -299,12 +300,12 @@ export const userChangePass = async (
     };
   }
 };
-export const userGetOrder = async (token: string) => {
+export const userGetOrder = async (userId: string) => {
   try {
-    const response = await axios.get(`/order/user/`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    const response = await axios.get(`/order/user/id/${userId}`, {
+      // headers: {
+      //   Authorization: `Bearer ${token}`,
+      // },
     });
     console.log(response.data);
     return {
@@ -325,7 +326,30 @@ export const cancelOrderApi = async (orderId: string) => {
   try {
     const res = await axios.patch(
       `/order/status/${orderId}`,
-      { status: "Da huy" },
+      { status: 5 },
+      // {
+      //   headers: {
+      //     Authorization: `Bearer ${token}`,
+      //   },
+      // }
+    );
+    return {
+      success: true,
+      data: res.data,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.response?.data?.error || "Hủy đơn hàng thất bại",
+    };
+  }
+};
+export const completeOrderApi = async (orderId: string) => {
+  // export const cancelOrderApi = async (orderId: string, token: string) => {
+  try {
+    const res = await axios.patch(
+      `/order/status/${orderId}`,
+      { status: 4 }
       // {
       //   headers: {
       //     Authorization: `Bearer ${token}`,
