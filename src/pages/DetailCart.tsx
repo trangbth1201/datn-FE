@@ -393,7 +393,7 @@ const DetailCart = () => {
                         Đang xử lý...
                       </div>
                     ) : (
-                      `Thanh toán (${selectedItems.length})`
+                      `Đặt hàng (${selectedItems.length})`
                     )}
                   </button>
                 </>
@@ -410,9 +410,9 @@ const DetailCart = () => {
                 Thanh toán an toàn & bảo mật
               </div>
               <div className="mt-4 text-xs text-gray-500 space-y-1">
-                <p>• Miễn phí đổi trả trong 30 ngày</p>
-                <p>• Bảo hành chính hãng</p>
-                <p>• Hỗ trợ 24/7</p>
+                <p className="flex justify-between text-sm">• Miễn phí đổi trả trong 30 ngày</p>
+                <p className="flex justify-between text-sm">• Bảo hành chính hãng</p>
+                <p className="flex justify-between text-sm">• Hỗ trợ 24/7</p>
               </div>
             </div>
           </div>

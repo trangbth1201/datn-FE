@@ -8,7 +8,6 @@ export const cartService = {
       const response = await axios.get(`${API_URL}/cart`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
-      localStorage.setItem('cartitem',response.data.cartItem)
       return response.data;
     } catch (error:any) {
       console.error('Lỗi khi tải giỏ hàng:', error.response?.data || error.message);
