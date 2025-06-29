@@ -3,7 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 
 const OrderConfirmationPage = () => {
   const { orderId } = useParams();
-const total = localStorage.getItem('totalAmount');
+  const totalFromStorage = localStorage.getItem('totalAmount');
+  const totalAmount = Number(totalFromStorage) || 0;
+  const formattedTotal = totalAmount.toLocaleString('vi-VN');
   useEffect(() => {
     
     // Clear checkout data from localStorage
@@ -42,7 +44,7 @@ const total = localStorage.getItem('totalAmount');
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Tổng tiền:</span>
-                <span className="font-medium text-lg">{total}₫</span>
+                <span className="font-medium text-lg">{formattedTotal}₫</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Phương thức thanh toán:</span>
