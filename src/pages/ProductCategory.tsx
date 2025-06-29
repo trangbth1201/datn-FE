@@ -1,7 +1,7 @@
+import { DownOutlined, FilterOutlined, UpOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { FilterOutlined, SearchOutlined, DownOutlined, UpOutlined } from '@ant-design/icons';
-import { Layout, Pagination, Select, Spin, Input, Drawer } from "antd";
-import { useState, useEffect, useMemo } from "react";
+import { Drawer, Layout, Pagination, Select, Spin } from "antd";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { IBrand, ICategory } from '../interface/category.interface';
 import { IProduct } from '../interface/product.interface';
@@ -21,13 +21,13 @@ export default function ProductCategory() {
   const [showAllBrands, setShowAllBrands] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategorySlug, setExpandedCategorySlug] = useState<string | null>(expandedParam);
 
   const { data: productsData, isLoading: isLoadingProducts } = useQuery<{ docs: IProduct[] }>({
     queryKey: ['products'],
     queryFn: productService.getAllProducts
   });
+  
   const { data: brandData, isLoading: isLoadingBrand } = useQuery<{ docs: IBrand[] }>({
     queryKey: ['brands'],
     queryFn: brandService.getAllBrands
@@ -43,8 +43,6 @@ export default function ProductCategory() {
     queryFn: productService.getAllProducts
   });
 
-  const [subCategoriesData, setSubCategoriesData] = useState<{ [parentId: string]: ICategory[] }>({});
-
   const activeProducts = useMemo(() => {
     return productsData?.docs?.filter(product => product.isActive) || [];
   }, [productsData?.docs]);
@@ -53,42 +51,75 @@ export default function ProductCategory() {
     return brandData?.docs.filter(brand => brand.isActive && brand.name && brand.slug !== 'thuong-hieu-khong-xac-dinh') || [];
   }, [brandData]);
 
-  const activeCategories = useMemo(() => {
-    return categoriesData?.docs.filter(category => category.isActive && category.name && category.slug !== 'danh-muc-khong-xac-dinh') || [];
+  const { parentCategories, subCategoriesMap } = useMemo(() => {
+    if (!categoriesData?.docs) return { parentCategories: [], subCategoriesMap: {}, allActiveCategories: [] };
+
+    const allActive = categoriesData.docs.filter(category => 
+      category.isActive && category.name && category.slug !== 'danh-muc-khong-xac-dinh'
+    );
+
+    const parents = allActive.filter(cat => !cat.parentId);
+    
+    const subMap: { [parentId: string]: ICategory[] } = {};
+    
+    parents.forEach(parent => {
+      if (parent.subCategories && parent.subCategories.length > 0) {
+        const activeSubCategories = parent.subCategories.filter(sub => 
+          sub.isActive && sub.name
+        );
+        if (activeSubCategories.length > 0) {
+          subMap[parent._id] = activeSubCategories;
+        }
+      }
+    });
+
+    return {
+      parentCategories: parents,
+      subCategoriesMap: subMap,
+      allActiveCategories: allActive
+    };
   }, [categoriesData]);
 
   const getIdFromSlug = (slug: string, type: 'brand' | 'category'): string => {
     if (slug === 'all') return 'all';
-    if (type === 'brand') return activeBrands?.find(b => b.slug === slug)?._id?.toString() || 'all';
+    
+    if (type === 'brand') {
+      return activeBrands?.find(b => b.slug === slug)?._id?.toString() || 'all';
+    }
 
-    const cat = activeCategories?.find(c => c.slug === slug && !c.parentId);
-    if (cat) return cat._id.toString();
+    const parentCat = parentCategories?.find(c => c.slug === slug);
+    if (parentCat) return parentCat._id.toString();
 
-    const subCat = activeCategories?.find(c => c.slug === slug && c.parentId);
-    if (subCat) return subCat._id.toString();
+    for (const subCats of Object.values(subCategoriesMap)) {
+      const subCat = subCats.find(sc => sc.slug === slug);
+      if (subCat) return subCat._id.toString();
+    }
 
     return 'all';
   };
 
   const getSlugFromId = (id: string, type: 'brand' | 'category'): string => {
     if (id === 'all') return 'all';
-    if (type === 'brand') return activeBrands?.find(b => b._id === id)?.slug || 'all';
+    
+    if (type === 'brand') {
+      return activeBrands?.find(b => b._id === id)?.slug || 'all';
+    }
 
-    const cat = activeCategories?.find(c => c._id === id);
-    if (cat) return cat.slug;
+    const parentCat = parentCategories?.find(c => c._id === id);
+    if (parentCat) return parentCat.slug;
 
-    for (const subCats of Object.values(subCategoriesData)) {
-      const sub = subCats.filter(sc => sc.isActive && sc.name).find(sc => sc._id === id);
-      if (sub) return sub.slug;
+    for (const subCats of Object.values(subCategoriesMap)) {
+      const subCat = subCats.find(sc => sc._id === id);
+      if (subCat) return subCat.slug;
     }
 
     return 'all';
   };
 
   const findParentCategorySlug = (subcategoryId: string): string | null => {
-    for (const [parentId, subCats] of Object.entries(subCategoriesData)) {
-      if (subCats.filter(sc => sc.isActive && sc.name).some(sub => sub._id === subcategoryId)) {
-        const parent = activeCategories?.find(c => c._id === parentId);
+    for (const [parentId, subCats] of Object.entries(subCategoriesMap)) {
+      if (subCats.some(sub => sub._id === subcategoryId)) {
+        const parent = parentCategories?.find(c => c._id === parentId);
         return parent?.slug || null;
       }
     }
@@ -97,8 +128,9 @@ export default function ProductCategory() {
 
   const selectedCategoryId = useMemo(
     () => getIdFromSlug(selectedCategorySlug, 'category'),
-    [selectedCategorySlug, activeCategories, subCategoriesData]
+    [selectedCategorySlug, parentCategories, subCategoriesMap]
   );
+  
   const selectedBrandId = useMemo(
     () => getIdFromSlug(selectedBrandSlug, 'brand'),
     [selectedBrandSlug, activeBrands]
@@ -108,13 +140,16 @@ export default function ProductCategory() {
     const params = new URLSearchParams();
     const catSlug = getSlugFromId(newCategoryId ?? selectedCategoryId, 'category');
     const brandSlug = getSlugFromId(newBrandId ?? selectedBrandId, 'brand');
+    
     if (catSlug !== 'all') params.set('category', catSlug);
     if (brandSlug !== 'all') params.set('brand', brandSlug);
+    
     if (newExpandedSlug !== undefined) {
       if (newExpandedSlug) params.set('expanded', newExpandedSlug);
     } else if (expandedCategorySlug) {
       params.set('expanded', expandedCategorySlug);
     }
+    
     setSearchParams(params);
   };
 
@@ -122,7 +157,19 @@ export default function ProductCategory() {
     const parentSlug = findParentCategorySlug(categoryId);
     updateUrlParams(categoryId, undefined, parentSlug);
   };
+  
   const handleBrandSelect = (brandId: string) => updateUrlParams(undefined, brandId, undefined);
+
+  const handleExpandCategory = (parentId: string) => {
+    const parentSlug = getSlugFromId(parentId, 'category');
+    if (expandedCategorySlug === parentSlug) {
+      setExpandedCategorySlug(null);
+      updateUrlParams(undefined, undefined, null);
+    } else {
+      setExpandedCategorySlug(parentSlug);
+      updateUrlParams(undefined, undefined, parentSlug);
+    }
+  };
 
   useEffect(() => {
     if (selectedCategorySlug !== 'all') {
@@ -134,23 +181,22 @@ export default function ProductCategory() {
       }
     }
     if (selectedBrandSlug !== 'all') setShowAllBrands(true);
-  }, [selectedCategorySlug, selectedBrandSlug, activeCategories, subCategoriesData]);
+  }, [selectedCategorySlug, selectedBrandSlug, parentCategories, subCategoriesMap]);
 
   useEffect(() => {
-    if (expandedParam && activeCategories) {
+    if (expandedParam && parentCategories) {
       setExpandedCategorySlug(expandedParam);
     }
-  }, [expandedParam, activeCategories]);
+  }, [expandedParam, parentCategories]);
 
   const filteredProducts = useMemo(() => {
     if (!activeProducts) return [];
     return activeProducts.filter(product => {
       const matchCat = selectedCategoryId === 'all' || product.categoryId === selectedCategoryId;
       const matchBrand = selectedBrandId === 'all' || product.brandId === selectedBrandId;
-      const matchSearch = !searchQuery || product.name.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchCat && matchBrand && matchSearch;
+      return matchCat && matchBrand;
     });
-  }, [activeProducts, selectedCategoryId, selectedBrandId, searchQuery]);
+  }, [activeProducts, selectedCategoryId, selectedBrandId]);
 
   const featuredProducts = useMemo(() => {
     if (!newProductsData?.docs) return [];
@@ -168,30 +214,6 @@ export default function ProductCategory() {
       }));
   }, [newProductsData?.docs]);
 
-  const handleExpandCategory = async (parentId: string) => {
-    const parentSlug = getSlugFromId(parentId, 'category');
-    if (expandedCategorySlug === parentSlug) {
-      setExpandedCategorySlug(null);
-      updateUrlParams(undefined, undefined, null);
-      return;
-    }
-
-    setExpandedCategorySlug(parentSlug);
-    updateUrlParams(undefined, undefined, parentSlug);
-
-    if (!subCategoriesData[parentId]) {
-      try {
-        const parentCategory = activeCategories?.find(c => c._id === parentId);
-        if (parentCategory && parentCategory.subCategories) {
-          const activeSubCategories = parentCategory.subCategories.filter(sc => sc.isActive && sc.name);
-          setSubCategoriesData(prev => ({ ...prev, [parentId]: activeSubCategories }));
-        }
-      } catch (error) {
-        console.error('Error fetching subcategories:', error);
-      }
-    }
-  };
-
   const getSelectedBrandName = () => selectedBrandId === 'all'
     ? 'Tất cả'
     : activeBrands?.find(b => b._id === selectedBrandId)?.name || 'Tất cả';
@@ -199,12 +221,12 @@ export default function ProductCategory() {
   const getSelectedCategoryName = () => {
     if (selectedCategoryId === 'all') return 'Tất cả';
 
-    const cat = activeCategories?.find(c => c._id === selectedCategoryId);
-    if (cat) return cat.name;
+    const parentCat = parentCategories?.find(c => c._id === selectedCategoryId);
+    if (parentCat) return parentCat.name;
 
-    for (const subCats of Object.values(subCategoriesData)) {
-      const sub = subCats.filter(sc => sc.isActive && sc.name).find(sc => sc._id === selectedCategoryId);
-      if (sub) return sub.name;
+    for (const subCats of Object.values(subCategoriesMap)) {
+      const subCat = subCats.find(sc => sc._id === selectedCategoryId);
+      if (subCat) return subCat.name;
     }
 
     return 'Tất cả';
@@ -215,6 +237,7 @@ export default function ProductCategory() {
     if (filteredProducts.length === 0) {
       return <div className="col-span-full text-center text-gray-500 py-8">Không có sản phẩm nào phù hợp với bộ lọc</div>;
     }
+    
     return filteredProducts.map((product: IProduct) => {
       const displayPrice = product.variation?.[0]?.salePrice > 0
         ? product.variation[0].salePrice
@@ -240,7 +263,7 @@ export default function ProductCategory() {
               loading="lazy"
             />
 
-            <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+            <div className="absolute top-2 left-2 flex flex-col gap-1">
               {product.isActive && (
                 <span className="text-xs px-2 py-0.5 rounded-bl-md rounded-tr-md text-white font-bold bg-green-600 shadow-sm">
                   MỚI
@@ -341,68 +364,54 @@ export default function ProductCategory() {
             {isLoadingCategories ? (
               <li className="px-2 py-3 text-gray-500">Đang tải...</li>
             ) : (
-              showAllCategories && activeCategories
-                ?.filter(cat => !cat.parentId && cat.name)
-                ?.map((cat: any) => {
-                  const hasActiveSubCategories = activeCategories.some(subCat => subCat.parentId === cat._id && subCat.isActive && subCat.name) ||
-                    (subCategoriesData[cat._id]?.filter(sc => sc.isActive && sc.name)?.length > 0);
-                  const isExpanded = expandedCategorySlug === cat.slug;
+              showAllCategories && parentCategories?.map((cat: any) => {
+                const hasSubCategories = subCategoriesMap[cat._id]?.length > 0;
+                const isExpanded = expandedCategorySlug === cat.slug;
 
-                  return (
-                    <div key={cat._id}>
-                      <li
-                        onClick={() => {
-                          if (hasActiveSubCategories) {
-                            handleExpandCategory(cat._id);
-                          } else {
-                            handleCategorySelect(cat._id);
+                return (
+                  <div key={cat._id}>
+                    <li
+                      onClick={() => {
+                        if (hasSubCategories) {
+                          handleExpandCategory(cat._id);
+                        } else {
+                          handleCategorySelect(cat._id);
+                        }
+                      }}
+                      className={`flex justify-between items-center cursor-pointer px-2 py-2 transition-all duration-200 
+                        ${selectedCategoryId === cat._id ? "bg-gray-200 font-semibold" : "hover:bg-gray-100"}`}
+                    >
+                      <span className="text-gray-800 text-sm font-medium">{cat.name}</span>
+                      {hasSubCategories && (
+                        <span className="text-gray-400 text-base font-bold">
+                          {isExpanded ?
+                            <UpOutlined style={{ fontSize: '12px' }} /> :
+                            <DownOutlined style={{ fontSize: '12px' }} />
                           }
-                        }}
-                        className={`flex justify-between items-center cursor-pointer px-2 py-2 transition-all duration-200 
-                          ${selectedCategoryId === cat._id ? "bg-gray-200 font-semibold" : "hover:bg-gray-100"}`}
-                      >
-                        <span className="text-gray-800 text-sm font-medium">{cat.name}</span>
-                        {hasActiveSubCategories && (
-                          <span className="text-gray-400 text-base font-bold">
-                            {isExpanded ?
-                              <UpOutlined style={{ fontSize: '12px' }} /> :
-                              <DownOutlined style={{ fontSize: '12px' }} />
-                            }
-                          </span>
-                        )}
-                      </li>
-                      {hasActiveSubCategories && isExpanded && (
-                        <ul className="pl-6 bg-gray-50">
-                          {subCategoriesData[cat._id]?.filter(subCat => subCat.isActive && subCat.name)?.map((subCat: any) => (
-                            <li
-                              key={subCat._id}
-                              onClick={() => handleCategorySelect(subCat._id)}
-                              className={`flex items-center cursor-pointer px-2 py-2 transition-all duration-200 
-                                ${selectedCategoryId === subCat._id ? "bg-gray-200 font-semibold" : "hover:bg-gray-100"}`}
-                            >
-                              <span className="text-left text-gray-600 text-sm">{subCat.name}</span>
-                            </li>
-                          )) ||
-                            activeCategories
-                              ?.filter(subCat => subCat.parentId === cat._id && subCat.isActive && subCat.name)
-                              ?.map((subCat: any) => (
-                                <li
-                                  key={subCat._id}
-                                  onClick={() => handleCategorySelect(subCat._id)}
-                                  className={`flex items-center cursor-pointer px-2 py-2 transition-all duration-200 
-                                  ${selectedCategoryId === subCat._id ? "bg-gray-200 font-semibold" : "hover:bg-gray-100"}`}
-                                >
-                                  <span className="text-left text-gray-600 text-sm">{subCat.name}</span>
-                                </li>
-                              ))}
-                        </ul>
+                        </span>
                       )}
-                    </div>
-                  );
-                })
+                    </li>
+                    {hasSubCategories && isExpanded && (
+                      <ul className="pl-6 bg-gray-50">
+                        {subCategoriesMap[cat._id]?.map((subCat: any) => (
+                          <li
+                            key={subCat._id}
+                            onClick={() => handleCategorySelect(subCat._id)}
+                            className={`flex items-center cursor-pointer px-2 py-2 transition-all duration-200 
+                              ${selectedCategoryId === subCat._id ? "bg-gray-200 font-semibold" : "hover:bg-gray-100"}`}
+                          >
+                            <span className="text-left text-gray-600 text-sm">{subCat.name}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })
             )}
           </ul>
         </div>
+
         <div className="mb-6 bg-gray-100 relative p-5">
           <h2 className="text-base font-bold mb-4">Các sản phẩm mới ra mắt</h2>
           <div className="relative mb-4">
@@ -467,16 +476,6 @@ export default function ProductCategory() {
           </div>
 
           <div className="flex flex-wrap gap-4 items-center justify-between">
-            <div className="flex-1 max-w-md">
-              <Input
-                placeholder="Tìm kiếm sản phẩm..."
-                prefix={<SearchOutlined className="text-gray-400" />}
-                className="w-full"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                allowClear
-              />
-            </div>
             <button
               onClick={() => setIsFilterVisible(true)}
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -531,7 +530,6 @@ export default function ProductCategory() {
                 <Option value="pink">Hồng</Option>
               </Select>
             </div>
-            {/* Filter actions */}
             <div className="flex gap-2 pt-4">
               <button
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -552,9 +550,11 @@ export default function ProductCategory() {
             </div>
           </div>
         </Drawer>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
           {renderProducts()}
         </div>
+
         <div className="mt-8 flex justify-center">
           <Pagination defaultCurrent={1} total={filteredProducts.length} />
         </div>
