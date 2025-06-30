@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useAuth } from "../auth/AuthContext ";
 import { login } from "../services/authService";
 import GoogleLoginButton from "../components/GoogleLoginButton";
+import ChatWindow from "../components/ChatWindow";
 // <-- Context login
 
 const Login: React.FC = () => {
@@ -25,7 +26,7 @@ const Login: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError(null); 
+        setError(null);
         try {
             const { accessToken, user } = await login(email, password);
             loginContext(accessToken, user);
@@ -34,8 +35,6 @@ const Login: React.FC = () => {
             setError(err.message);
         }
     };
-
-
     return (
         <>
             <AuthHeader title={"Đăng nhập"} />

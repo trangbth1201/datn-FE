@@ -30,3 +30,13 @@ export const formatCurrency = (amount?: number) => {
 export const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('vi-VN');
 };
+
+
+
+export interface MessageType {
+  id: number;
+  text?: string;
+  sender: "user" | "bot";
+  time: string;
+  image?: string;
+}

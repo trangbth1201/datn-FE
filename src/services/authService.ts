@@ -300,26 +300,22 @@ export const userChangePass = async (
     };
   }
 };
-export const userGetOrder = async (userId: string) => {
+
+export const userGetOrder = async (token?: string) => {
   try {
-    const response = await axios.get(`/order/user/id/${userId}`, {
-      // headers: {
-      //   Authorization: `Bearer ${token}`,
-      // },
+    const response = await axios.get(`/order/user`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-    console.log(response.data);
-    return {
-      success: true,
-      data: response.data,
-    };
+    return { success: true, data: response.data };
   } catch (error: any) {
+    console.error("Lỗi chi tiết:", error);
     return {
       success: false,
-      message:
-        error.response?.data?.message || "Không thể lấy danh sách đơn hàng",
+      message: error?.response?.data?.message || "Không thể lấy danh sách đơn hàng",
     };
   }
 };
+
 
 export const cancelOrderApi = async (orderId: string) => {
 // export const cancelOrderApi = async (orderId: string, token: string) => {

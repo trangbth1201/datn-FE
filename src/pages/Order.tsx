@@ -61,8 +61,8 @@ const OrderDashboard = () => {
 
   const fetchOrders = async () => {
     setLoading(true);
-    const userId = localStorage.getItem('userId');
-    const res = await userGetOrder(userId || '');
+    const token = localStorage.getItem('token');
+    const res = await userGetOrder(token ?? "");
     if (res.success) {
       setOrders(res.data);
     } else {
@@ -100,7 +100,6 @@ const OrderDashboard = () => {
       message.error('Hoàn thành thất bại');
     }
   };
-  console.log('Orders:', orders);
   
 
   const filteredOrders = orders.filter((order: Order) => {

@@ -21,13 +21,13 @@ const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
   const popoverContent = (
     <div className="min-w-[180px]">
       <p className="text-center ">
-        <a href="../user/info" className="text-sm"> Thông tin tài khoản</a>
+        <a href="/user/info" className="text-sm"> Thông tin tài khoản</a>
       </p>
        <p className="text-center">
-        <a href="../user/order" className="text-sm"> Đơn hàng của tôi</a>
+        <a href="/user/order" className="text-sm"> Đơn hàng của tôi</a>
       </p>
        <p className="text-center">
-        <a href="../user/changepassword" className="text-sm mb-4"> Đổi mật khẩu</a>
+        <a href="/user/changepassword" className="text-sm mb-4"> Đổi mật khẩu</a>
       </p>
       <p  className="text-sm  text-center" onClick={logout}>
         Đăng xuất
