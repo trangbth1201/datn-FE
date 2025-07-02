@@ -1,12 +1,12 @@
 import { HeartFilled, HeartOutlined, ShareAltOutlined, ShoppingCartOutlined, ShoppingOutlined } from "@ant-design/icons";
-import { Spin, Button, Image, Layout, Rate, Tabs, message, Radio } from "antd";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState, useMemo } from "react";
+import { Button, Image, Layout, message, Radio, Rate, Spin, Tabs } from "antd";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { IProduct, IVariation, IAttribute } from '../interface/product.interface';
-import { productService } from '../services/product.service';
-import { cartService } from '../services/cart.service';
 import { useAuth } from '../auth/AuthContext ';
+import { IAttribute, IProduct, IVariation } from '../interface/product.interface';
+import { cartService } from '../services/cart.service';
+import { productService } from '../services/product.service';
 
 const { Sider } = Layout;
 
@@ -21,6 +21,7 @@ export default function DetailProduct() {
   const [liked, setLiked] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isBuyingNow, setIsBuyingNow] = useState(false);
+  const [isManualImageSelection, setIsManualImageSelection] = useState(false);
 
   const { data: product, isLoading } = useQuery<IProduct>({
     queryKey: ['product', slug],
@@ -61,6 +62,7 @@ export default function DetailProduct() {
   const { data: newProducts, isLoading: isLoadingNew } = useQuery<{ docs: IProduct[] }>({
     queryKey: ['newProducts'],
     queryFn: productService.getAllProducts,
+    enabled: !!product,
   });
 
   useEffect(() => {
@@ -68,12 +70,8 @@ export default function DetailProduct() {
     setSelectedImageIndex(0);
     setSelectedAttributes({});
     setQuantity(1);
+    setIsManualImageSelection(false);
   }, [slug]);
-
-  const handleNavigateProduct = (slug: string) => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    setTimeout(() => navigate(`/products/${slug}`), 300);
-  };
 
   const activeVariations: IVariation[] = product?.variation?.filter(v => v.isActive) || [];
   const minPrice = Math.min(...activeVariations.map(v => v.salePrice > 0 ? v.salePrice : v.regularPrice));
@@ -112,21 +110,22 @@ export default function DetailProduct() {
   }, [product?.image, activeVariations]);
 
   const mainImage = useMemo(() => {
+    if (isManualImageSelection) {
+      return displayImages[selectedImageIndex] || displayImages[0];
+    }
     if (Object.keys(selectedAttributes).length > 0 && selectedVariation) {
       const selectedVariantImages = Array.isArray(selectedVariation.image)
         ? selectedVariation.image
         : [selectedVariation.image].filter(Boolean);
-
       if (selectedVariantImages.length > 0) {
         return selectedVariantImages[0];
       }
     }
-
     return displayImages[selectedImageIndex] || displayImages[0];
-  }, [selectedAttributes, selectedVariation, displayImages, selectedImageIndex]);
+  }, [selectedAttributes, selectedVariation, displayImages, selectedImageIndex, isManualImageSelection]);
 
   useEffect(() => {
-    if (Object.keys(selectedAttributes).length > 0 && selectedVariation) {
+    if (!isManualImageSelection && Object.keys(selectedAttributes).length > 0 && selectedVariation) {
       const selectedVariantImages = Array.isArray(selectedVariation.image)
         ? selectedVariation.image
         : [selectedVariation.image].filter(Boolean);
@@ -136,10 +135,13 @@ export default function DetailProduct() {
           setSelectedImageIndex(mainImageIndex);
         }
       }
-    } else {
-      setSelectedImageIndex(0);
     }
-  }, [selectedAttributes, selectedVariation, displayImages]);
+  }, [selectedAttributes, selectedVariation, displayImages, isManualImageSelection]);
+
+  const handleThumbnailClick = (img: string, index: number) => {
+    setSelectedImageIndex(index);
+    setIsManualImageSelection(true);
+  };
 
   const price = selectedVariation?.salePrice > 0 ? selectedVariation.salePrice : selectedVariation?.regularPrice;
   const inStock = activeVariations.some(v => v.stock > 0);
@@ -188,10 +190,6 @@ export default function DetailProduct() {
     } else {
       setQuantity(num);
     }
-  };
-
-  const handleThumbnailClick = (img: string, index: number) => {
-    setSelectedImageIndex(index);
   };
 
   const handleAddToCart = async () => {
@@ -394,6 +392,7 @@ export default function DetailProduct() {
                               ...prev,
                               [attr.attributeName]: prev[attr.attributeName] === value ? '' : value,
                             }));
+                            setIsManualImageSelection(false);
                           }}
                         />
                       ) : (
@@ -409,6 +408,7 @@ export default function DetailProduct() {
                               ...prev,
                               [attr.attributeName]: prev[attr.attributeName] === value ? '' : value,
                             }));
+                            setIsManualImageSelection(false);
                           }}
                         >
                           {value}
@@ -550,7 +550,7 @@ export default function DetailProduct() {
                     <div
                       key={p._id}
                       className="border p-4 rounded-lg hover:shadow-lg cursor-pointer transition-shadow"
-                      onClick={() => handleNavigateProduct(p.slug)}
+                      onClick={() => navigate(`/products/${p.slug}`)}
                     >
                       <div className="relative aspect-square overflow-hidden rounded">
                         <img
@@ -613,42 +613,42 @@ export default function DetailProduct() {
               })}
             </ul>
           </div>
-          <div className="mb-6">
+          <div className="mb-6 bg-gray-100 p-5">
             <h2 className="text-base font-bold mb-4">Các sản phẩm mới ra mắt</h2>
             <div className="relative mb-4">
               <div className="h-1 w-20 bg-orange-400" />
               <div className="absolute bottom-0 left-0 w-full h-px bg-gray-300" />
             </div>
             {isLoadingNew ? (
-              <div className="flex justify-center py-4">
-                <Spin size="small" tip="Đang tải..." />
+              <div className="flex justify-center py-2">
+                <Spin size="small" tip="Đang tải sản phẩm mới..." />
               </div>
             ) : !filteredNewProducts.length ? (
-              <div className="text-center py-4 text-gray-500 text-sm">
-                Không có sản phẩm mới nào
+              <div className="text-gray-500 text-sm text-center py-2">
+                Chưa có sản phẩm mới
               </div>
             ) : (
               <div className="space-y-4">
                 {filteredNewProducts.map(p => {
                   const price = p.variation?.[0]?.salePrice > 0
                     ? p.variation[0].salePrice
-                    : p.variation[0]?.regularPrice;
+                    : p.variation?.[0]?.regularPrice;
                   return (
                     <div
                       key={p._id}
-                      className="flex space-x-3 border-b pb-3 cursor-pointer hover:bg-gray-50"
-                      onClick={() => handleNavigateProduct(p.slug)}
+                      className="flex space-x-3 border-b pb-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => navigate(`/products/${p.slug}`)}
                     >
-                      <img
-                        src={p.image[0]}
-                        alt={p.name}
-                        className="w-16 h-16 object-cover rounded"
-                      />
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-900 truncate">
-                          {p.name}
-                        </h3>
-                        <p className="text-sm font-medium text-red-500">
+                      <div className="flex-shrink-0 w-16 h-16 overflow-hidden rounded">
+                        <img
+                          src={p.image[0] || '/placeholder.svg'}
+                          alt={p.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-medium text-gray-900 truncate">{p.name}</h3>
+                        <p className="mt-1 text-sm font-medium text-red-500">
                           {price?.toLocaleString('vi-VN')}đ
                         </p>
                       </div>
