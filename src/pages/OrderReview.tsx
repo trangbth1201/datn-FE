@@ -63,10 +63,8 @@ const OrderReview = () => {
       const subtotal = selectedItems.reduce((total, item) => total + (item.salePrice > 0 ? item.salePrice : item.regularPrice) * item.quantity, 0);
       const totalSavings = selectedItems.reduce((savings, item) => item.salePrice > 0 ? savings + (item.regularPrice - item.salePrice) * item.quantity : savings, 0);
       const shippingFee = 30000;
-      const freeShippingThreshold = 500000;
-      const finalShippingFee = subtotal >= freeShippingThreshold ? 0 : shippingFee;
 
-      setOrderSummary({ items: selectedItems, subtotal, totalSavings, shippingFee: finalShippingFee, itemCount: selectedItems.length });
+      setOrderSummary({ items: selectedItems, subtotal, totalSavings, shippingFee, itemCount: selectedItems.length });
       setShippingInfo(JSON.parse(savedShippingInfo));
       setPaymentMethod(savedPaymentMethod);
       if (savedVoucher) {
@@ -95,18 +93,7 @@ const OrderReview = () => {
       voucher.used < voucher.quantity
     );
   };
-  console.log('Fetching available orderSummary...', orderSummary);
-  // Tạo order code unique
-  const generateOrderCode = () => {
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const day = date.getDate().toString().padStart(2, "0");
-    const random = Math.floor(Math.random() * 10000)
-      .toString()
-      .padStart(4, "0");
-    return `DH${year}${month}${day}-${random}`;
-  };
+  console.log('Fetching available orderSummary...', orderSummary)
 
   const validVouchers = useMemo(() => {
     return availableVouchers.filter(isVoucherValid);
@@ -192,7 +179,7 @@ const OrderReview = () => {
     return {
       userId: user._id,
       recipientInfo: { name: shippingInfo.fullName, email: shippingInfo.email, phone: shippingInfo.phone },
-      orderCode: generateOrderCode(),
+      orderCode: "#ORDER_CODE",
       voucherId: appliedVoucher ? [appliedVoucher._id] : [],
       shippingAddress: shippingInfo.street,
       items: orderSummary.items.map(item => ({
@@ -227,7 +214,7 @@ const OrderReview = () => {
     try {
       // Create order
       const result = await orderService.createOrder(orderData);
-
+    
       // Remove cart items
       try {
         for (const item of orderSummary!.items) {
@@ -237,7 +224,7 @@ const OrderReview = () => {
         console.warn('Lỗi khi xóa sản phẩm khỏi giỏ hàng:', err);
         // Không dừng flow nếu xóa giỏ hàng thất bại, chỉ ghi log
       }
-
+    
       // Handle payment and navigation
       if (orderData.paymentMethod === 'VNPAY') {
         const paymentResult: any = await paymentService.createVnpayPaymentUrl(result.order._id);
@@ -252,14 +239,15 @@ const OrderReview = () => {
           throw new Error('Không nhận được URL thanh toán từ máy chủ.');
         }
       }
-
+    
       // Nếu là COD hoặc phương thức khác, xóa dữ liệu và chuyển sang trang xác nhận đơn hàng
       ['selectedCartItems', 'shippingInfo', 'paymentMethod', 'appliedVoucher', 'totalAmount'].forEach(key => localStorage.removeItem(key));
       localStorage.setItem("totalAmount", finalTotal.toString());
-      navigate(`/order/confirmation/${orderData?.orderCode}`);
+      navigate(`/order/confirmation/${result?.order?.orderCode}`);
     } catch (err: any) {
       console.error('Lỗi khi xử lý đơn hàng:', err);
-      setError(err.response?.data?.message || err.message || "Có lỗi không mong muốn xảy ra.");
+      const errorMessage = err.response?.data?.error || err.message || "Có lỗi không mong muốn xảy ra.";
+      setError(errorMessage);
       setIsLoading(false);
     }
   };

@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Button as AntButton, Tag, Spin } from "antd";
+import { Button as AntButton, Spin, Tag } from "antd";
 import message from "antd/es/message";
-import { userGetOrder } from "../services/authService";
-import { SidebarLink } from "../components/SidebarLink";
-import { statusLabels, paymentStatusLabels, getStatusColor } from "./Order";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Order } from "../interface/order.interfcace";
+import { userGetOrder } from "../services/authService";
+import { getStatusColor } from "../utils/getStatusColor";
+import { paymentStatusLabels } from "../utils/paymentStatusLabels";
+import { statusLabels } from "../utils/statusLabels";
 
 const formatDate = (dateString: string) => {
   try {
@@ -63,10 +64,6 @@ const OrderDetail = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row gap-6">
-        <aside className="w-full md:w-64 bg-white rounded-lg shadow-sm p-4">
-          <SidebarLink />
-        </aside>
-
         <main className="flex-1">
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center gap-2 mb-6">

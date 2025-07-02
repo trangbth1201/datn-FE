@@ -2,9 +2,9 @@ export interface ShippingInfo {
   fullName: string;
   email: string;
   phone: string;
-  address: string; 
+  address: string;
   note?: string;
-  street: string; 
+  street: string;
 }
 
 export interface Voucher {
@@ -54,7 +54,7 @@ export interface OrderPayload {
   expectedDeliveryDate: string;
 }
 
-export interface Order {
+export interface IOrder {
   _id: string;
   completedBy: string | null;
   createdAt: string;
@@ -93,7 +93,7 @@ export interface OrderItem {
   color: string;
   regularPrice: number;
   salePrice: number;
-  cartItemId?: string; 
+  cartItemId?: string;
 }
 
 interface RecipientInfo {

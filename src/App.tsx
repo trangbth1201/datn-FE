@@ -1,5 +1,5 @@
 import React from "react";
-import { Route, Routes } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import AuthLayout from "./layouts/AuthLayout";
 import MainLayout from "./layouts/MainLayout";
@@ -24,6 +24,7 @@ import Register from "./pages/Register";
 import ShippingAddressForm from "./pages/ShippingAddressForm";
 import { UserInfo } from "./pages/Userinfo";
 import { useSocket } from "./socket/useSocket";
+import { Sidebar } from "./components/Sidebar";
 
 const App: React.FC = () => {
   useSocket();
@@ -50,34 +51,29 @@ const App: React.FC = () => {
           path="/order/confirmation/:orderId"
           element={<OrderConfirmationPage />}
         />
-
         {/* Blogs */}
         <Route path="/blogs" element={<BlogCategory />} />
         <Route path="/blogs/detail" element={<DetailBlog />} />
+        {/* User Routes with Sidebar */}
         <Route
-          path="/user/info"
+          path="/user/*"
           element={
             <ProtectedRoute>
-              <UserInfo />
+              <div className="flex min-h-screen">
+                <Sidebar />
+                <main className="flex-1 p-4 md:p-6 lg:p-8">
+                  <Routes>
+                    <Route index element={<UserInfo />} />
+                    <Route path="info" element={<UserInfo />} />
+                    <Route path="changepassword" element={<ChangePassword />} />
+                    <Route path="order" element={<Order />} />
+                  </Routes>
+                </main>
+              </div>
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/user/changepassword"
-          element={
-            <ProtectedRoute>
-              <ChangePassword />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/user/order"
-          element={
-            <ProtectedRoute>
-              <Order />
-            </ProtectedRoute>
-          }
-        />
+        {/* Order Detail without Sidebar */}
         <Route
           path="/order/:orderId"
           element={
@@ -87,52 +83,6 @@ const App: React.FC = () => {
           }
         />
       </Route>
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/products/detailorder" element={<DetailOrder />} />
-
-        {/* Products */}
-        <Route
-          path="products/brand/:brandSlug/category/:categorySlug"
-          element={<ProductCategory />}
-        />
-        <Route path="products" element={<ProductCategory />} />
-        <Route path="products/:slug" element={<DetailProduct />} />
-        <Route path="products/cart" element={<DetailCart />} />
-
-        {/* Blogs */}
-        <Route path="blogs" element={<BlogCategory />} />
-        <Route path="blogs/detail" element={<DetailBlog />} />
-
-        {/* Protected Routes */}
-        <Route
-          path="user/info"
-          element={
-            <ProtectedRoute>
-              <UserInfo />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="user/changepassword"
-          element={
-            <ProtectedRoute>
-              <ChangePassword />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="user/order"
-          element={
-            <ProtectedRoute>
-              <Order />
-            </ProtectedRoute>
-          }
-        />
-      </Route>
-
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

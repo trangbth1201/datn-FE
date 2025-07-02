@@ -84,14 +84,14 @@ const OrderConfirmationPage = () => {
           {/* Action Buttons */}
           <div className="space-y-3">
             <Link
-              to={`/order/${orderId}`}
+              to={`/user/order`}
               className="w-full bg-blue-600 text-white py-3 px-4 rounded-md font-medium hover:bg-blue-700 inline-block text-center"
             >
               Theo dõi đơn hàng
             </Link>
 
             <Link
-              to="/"
+              to="/products"
               className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-md font-medium hover:bg-gray-50 inline-block text-center"
             >
               Tiếp tục mua sắm

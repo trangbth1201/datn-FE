@@ -90,9 +90,7 @@ const AccountSettings: React.FC = () => {
   return (
     <>
       <div className="max-w-6xl mx-auto py-8 md:px-6 flex flex-col md:flex-row gap-8">
-        <aside className="w-full md:w-56 space-y-3 mb-6 md:mb-0">
-          <SidebarLink />
-        </aside>
+
         <main className="flex-1 space-y-12">
           <section>
             <h1 className="text-2xl font-semibold mb-6">Thông tin tài khoản</h1>

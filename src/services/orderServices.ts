@@ -11,7 +11,7 @@ export const orderService = {
         headers: {
           "Content-Type": "application/json",
           // Thêm Authorization header nếu có authentication
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
       return response.data;
@@ -22,7 +22,7 @@ export const orderService = {
   },
 
   // Lấy thông tin đơn hàng theo ID
-  getOrderById: async (orderId) => {
+  getOrderById: async (orderId: string) => {
     try {
       const response = await axios.get(`${API_URL}/order/${orderId}`);
       return response.data;
@@ -33,7 +33,7 @@ export const orderService = {
   },
 
   // Lấy đơn hàng theo orderCode
-  getOrderByCode: async (orderCode) => {
+  getOrderByCode: async (orderCode: string) => {
     try {
       const response = await axios.get(`${API_URL}/order/code/${orderCode}`);
       return response.data;
@@ -44,7 +44,7 @@ export const orderService = {
   },
 
   // Lấy danh sách đơn hàng của user
-  getUserOrders: async (userId) => {
+  getUserOrders: async (userId: string) => {
     try {
       const response = await axios.get(`${API_URL}/order/user/${userId}`);
       return response.data;
@@ -55,7 +55,7 @@ export const orderService = {
   },
 
   // Cập nhật trạng thái đơn hàng
-  updateOrderStatus: async (orderId, status) => {
+  updateOrderStatus: async (orderId: string, status: number) => {
     try {
       const response = await axios.patch(`${API_URL}/order/${orderId}/status`, {
         status,
@@ -68,7 +68,7 @@ export const orderService = {
   },
 
   // Cập nhật trạng thái thanh toán
-  updatePaymentStatus: async (orderId, paymentStatus) => {
+  updatePaymentStatus: async (orderId: string, paymentStatus: number) => {
     try {
       const response = await axios.patch(
         `${API_URL}/order/${orderId}/payment-status`,
@@ -84,7 +84,7 @@ export const orderService = {
   },
 
   // Hủy đơn hàng
-  cancelOrder: async (orderId, reason) => {
+  cancelOrder: async (orderId: string, reason: any) => {
     try {
       const response = await axios.patch(`${API_URL}/order/${orderId}/cancel`, {
         reason,
@@ -92,6 +92,21 @@ export const orderService = {
       return response.data;
     } catch (error) {
       console.error("Lỗi khi hủy đơn hàng:", error);
+      throw error;
+    }
+  },
+  getPaymentStatus: async (orderId: string) => {
+    try {
+      const response = await axios.get(`${API_URL}/payment/status/${orderId}`, {
+        headers: {
+          "Content-Type": "application/json", 
+          // Thêm Authorization header nếu có authentication
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi khi lấy trạng thái đơn hàng:", error);
       throw error;
     }
   },
