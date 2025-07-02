@@ -24,7 +24,7 @@ const DetailCart = () => {
           slug: item.product.slug || '',
           name: item.product.name,
           image: item.variant?.image || item.product.images[0] || '',
-          size: item.variant?.attributes?.find((a: any) => a.attributeName === 'Kích thước')?.values[0] || item.size || 'Size mặc định',
+          size: item.variant?.attributes?.find((a: any) => a.attributeName === 'Kích Thước')?.values[0] || item.size || 'Size mặc định',
           color: item.color || item.variant?.attributes?.find((a: any) => a.attributeName === 'Màu sắc')?.values[0] || 'Màu mặc định',
           regularPrice: item.variant?.regularPrice,
           salePrice: item.variant?.salePrice,
@@ -202,6 +202,7 @@ const DetailCart = () => {
         })),
       });
       setTimeout(() => {
+        localStorage.setItem('selectedCartItems', JSON.stringify(selectedItems));
         navigate('/checkout');
       }, 500);
     } catch (error) {
