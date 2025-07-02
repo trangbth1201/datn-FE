@@ -5,7 +5,6 @@ const ShippingAddressForm = () => {
   const navigate = useNavigate();
   const [orderSummary, setOrderSummary] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [apiError, setApiError] = useState<string>('');
 
   // Lấy dữ liệu user từ localStorage
   const getUserData = () => {
@@ -47,18 +46,15 @@ const ShippingAddressForm = () => {
           return savings;
         }, 0);
         const shippingFee = 30000;
-        const freeShippingThreshold = 500000;
-        const finalShippingFee = subtotal >= freeShippingThreshold ? 0 : shippingFee;
-        const finalTotal = subtotal + finalShippingFee;
+        const finalTotal = subtotal + shippingFee;
 
         setOrderSummary({
           items: selectedItems,
           subtotal,
           totalSavings,
-          shippingFee: finalShippingFee,
+          shippingFee,
           finalTotal,
           itemCount: selectedItems.length,
-          freeShippingThreshold
         });
       } catch {
         navigate('/cart');
@@ -181,7 +177,6 @@ const ShippingAddressForm = () => {
         {/* Form thông tin giao hàng */}
         <form onSubmit={handleSubmit} className="flex-1 bg-white rounded-lg shadow p-6">
           <h1 className="text-3xl font-bold mb-6">Thông tin giao hàng</h1>
-          {apiError && <p className="text-red-600 mb-4">{apiError}</p>}
 
           <div className="space-y-6">
             <div>

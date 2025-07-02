@@ -96,15 +96,13 @@ const PaymentMethodPage = () => {
         (savings, item) => item.salePrice > 0 ? savings + (item.regularPrice - item.salePrice) * item.quantity : savings, 0
       );
       const shippingFee = 30000;
-      const freeShippingThreshold = 500000;
-      const finalShippingFee = subtotal >= freeShippingThreshold ? 0 : shippingFee;
-      const finalTotal = subtotal + finalShippingFee;
+      const finalTotal = subtotal + shippingFee;
 
       setOrderSummary({
         items: selectedItems,
         subtotal,
         totalSavings,
-        shippingFee: finalShippingFee,
+        shippingFee,
         finalTotal,
         itemCount: selectedItems.length,
       });
