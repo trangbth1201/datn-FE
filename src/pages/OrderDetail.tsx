@@ -59,9 +59,6 @@ const OrderDetail = () => {
     return (
         <div className="min-h-screen bg-gray-100">
             <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row gap-6">
-                <aside className="w-full md:w-64 bg-white rounded-lg shadow-sm p-4">
-                    <SidebarLink />
-                </aside>
 
                 <main className="flex-1">
                     <div className="bg-white rounded-lg shadow-sm p-6">
@@ -131,7 +128,7 @@ const OrderDetail = () => {
 
                         <div className="mt-6">
                             <AntButton
-                                onClick={() => navigate('/orders')}
+                                onClick={() => navigate('/user/order')}
                                 className="bg-blue-500 hover:bg-blue-600 text-white"
                             >
                                 Quay lại

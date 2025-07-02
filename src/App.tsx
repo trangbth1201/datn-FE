@@ -12,7 +12,6 @@ import DetailProduct from "./pages/DetailProduct";
 import DetailCart from "./pages/DetailCart";
 import BlogCategory from "./pages/BlogCategory";
 import DetailBlog from "./pages/DetailBlog";
-import { UserInfo } from "./pages/Userinfo";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import ChangePassword from "./pages/ChangePassword";
 import Order from "./pages/Order";
@@ -23,58 +22,52 @@ import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 import OrderReview from "./pages/OrderReview";
 import PaymentMethodSelection from "./pages/PaymentMethodSelection";
 import OrderDetail from "./pages/OrderDetail";
+import { UserInfo } from "./pages/Userinfo";
+import { Sidebar } from "./components/Sidebar";
 
 const App: React.FC = () => {
   return (
-      <Routes>
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<Home />} />
-          <Route path="/about" element={<About />} />
-          {/* Products */}
-          <Route path="/products/brand/:brandSlug/category/:categorySlug" element={<ProductCategory />} />
-          <Route path="/products" element={<ProductCategory />} />
-          <Route path="/products/:slug" element={< DetailProduct />} />
-          <Route path="/cart" element={< DetailCart />} />
-          <Route path="/checkout" element={<CheckoutLayout />}>
-            <Route index element={<ShippingAddressForm />} />
-            <Route path="shipping" element={<ShippingAddressForm />} />
-            <Route path="payment" element={<PaymentMethodSelection />} />
-            <Route path="review" element={<OrderReview />} />
-          </Route>
-          <Route path="/order/confirmation/:orderId" element={<OrderConfirmationPage />} />
-
-          {/* Blogs */}
-          <Route path="/blogs" element={< BlogCategory />} />
-          <Route path="/blogs/detail" element={< DetailBlog />} />
-          <Route path="/user/info" element={<ProtectedRoute>< UserInfo /></ProtectedRoute>} />
-          <Route path="/user/changepassword" element={<ProtectedRoute>< ChangePassword /></ProtectedRoute>} />
-          <Route path="/user/order" element={<ProtectedRoute>< Order /></ProtectedRoute>} />
-          <Route path="/order/:orderId" element={<ProtectedRoute>< OrderDetail /></ProtectedRoute>} />
-
-        </Route>
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword/>} />
-          <Route path="/products/detailorder" element = {<DetailOrder/>} />
-
+    <Routes>
+      <Route path="/" element={<MainLayout />}>
+        <Route index element={<Home />} />
+        <Route path="/about" element={<About />} />
         {/* Products */}
-        <Route path="products/brand/:brandSlug/category/:categorySlug" element={<ProductCategory />} />
-        <Route path="products" element={<ProductCategory />} />
-        <Route path="products/:slug" element={<DetailProduct />} />
-        <Route path="products/cart" element={<DetailCart />} />
-
+        <Route path="/products/brand/:brandSlug/category/:categorySlug" element={<ProductCategory />} />
+        <Route path="/products" element={<ProductCategory />} />
+        <Route path="/products/:slug" element={<DetailProduct />} />
+        <Route path="/cart" element={<DetailCart />} />
+        <Route path="/checkout" element={<CheckoutLayout />}>
+          <Route index element={<ShippingAddressForm />} />
+          <Route path="shipping" element={<ShippingAddressForm />} />
+          <Route path="payment" element={<PaymentMethodSelection />} />
+          <Route path="review" element={<OrderReview />} />
+        </Route>
+        <Route path="/order/confirmation/:orderId" element={<OrderConfirmationPage />} />
         {/* Blogs */}
-        <Route path="blogs" element={<BlogCategory />} />
-        <Route path="blogs/detail" element={<DetailBlog />} />
-        {/* <Route path="socket" element={<SocketPage />} /> */}
-
-        {/* Protected Routes */}
-        <Route path="user/info" element={<ProtectedRoute><UserInfo /></ProtectedRoute>} />
-        <Route path="user/changepassword" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
-        <Route path="user/order" element={<ProtectedRoute><Order /></ProtectedRoute>} />
+        <Route path="/blogs" element={<BlogCategory />} />
+        <Route path="/blogs/detail" element={<DetailBlog />} />
+        {/* User Routes with Sidebar */}
+        <Route
+          path="/user/*"
+          element={
+            <ProtectedRoute>
+              <div className="flex min-h-screen">
+                <Sidebar />
+                <main className="flex-1 p-4 md:p-6 lg:p-8">
+                  <Routes>
+                    <Route index element={<UserInfo />} />
+                    <Route path="info" element={<UserInfo />} />
+                    <Route path="changepassword" element={<ChangePassword />} />
+                    <Route path="order" element={<Order />} />
+                  </Routes>
+                </main>
+              </div>
+            </ProtectedRoute>
+          }
+        />
+        {/* Order Detail without Sidebar */}
+        <Route path="/order/:orderId" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
       </Route>
-
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

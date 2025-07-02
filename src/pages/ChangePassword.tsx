@@ -113,11 +113,6 @@ const ChangePassword: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 md:px-6 flex flex-col md:flex-row gap-8">
-      {/* Sidebar */}
-      <aside className="w-full md:w-56 space-y-3 mb-6 md:mb-0">
-        <SidebarLink />
-      </aside>
-
       {/* Main content */}
       <main className="flex-1">
         <h1 className="text-2xl font-semibold mb-6">Đổi mật khẩu</h1>
