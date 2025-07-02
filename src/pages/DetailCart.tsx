@@ -24,14 +24,14 @@ const DetailCart = () => {
           slug: item.product.slug || '',
           name: item.product.name,
           image: item.variant?.image || item.product.images[0] || '',
-          size: item.variant?.attributes?.find((a: any) => a.attributeName === 'Kích thước')?.values[0] || item.size || 'Size mặc định',
+          size: item.variant?.attributes?.find((a: any) => a.attributeName === 'Kích Thước')?.values[0] || item.size || 'Size mặc định',
           color: item.color || item.variant?.attributes?.find((a: any) => a.attributeName === 'Màu sắc')?.values[0] || 'Màu mặc định',
           regularPrice: item.variant?.regularPrice,
           salePrice: item.variant?.salePrice,
           quantity: item.quantity,
           stock: item.variant?.stock,
           selected: item.selected ?? true,
-          variantName: `${item.product.name} - ${item.variant?.attributes?.find((a: any) => a.attributeName === 'Màu sắc')?.values[0] || 'Màu mặc định'} / ${item.variant?.attributes?.find((a: any) => a.attributeName === 'Kích thước')?.values[0] || 'Size mặc định'}`,
+          variantName: `${item.product.name} - ${item.variant?.attributes?.find((a: any) => a.attributeName === 'Màu sắc')?.values[0] || 'Màu mặc định'} / ${item.variant?.attributes?.find((a: any) => a.attributeName === 'Kích Thước')?.values[0] || 'Size mặc định'}`,
         }))
       );
     }
@@ -168,6 +168,31 @@ const DetailCart = () => {
     }
   };
 
+  const clearAllItems = async () => {
+    setCartItems([]);
+
+    try {
+      for (const item of cartItems) {
+        await cartService.removeCart({
+          productId: item.productId,
+          variantId: item.variantId,
+        });
+      }
+      
+      await cartService.syncCart({
+        userId: localStorage.getItem('userId') || '',
+        items: [],
+      });
+      
+      await refetch();
+      message.success('Đã xóa tất cả sản phẩm khỏi giỏ hàng');
+    } catch (error) {
+      console.error('Lỗi khi xóa tất cả sản phẩm:', error);
+      message.error('Không thể xóa tất cả sản phẩm. Vui lòng thử lại.');
+      await refetch();
+    }
+  };
+
   const getItemPrice = (item: any) => item.salePrice > 0 ? item.salePrice : item.regularPrice;
   const getItemTotal = (item: any) => getItemPrice(item) * item.quantity;
   const getSelectedItems = () => cartItems.filter(item => item.selected);
@@ -251,15 +276,33 @@ const DetailCart = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
             <div className="bg-white rounded-lg shadow-sm p-4">
-              <label className="flex items-center space-x-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleSelectAll}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <span className="font-medium text-gray-900">Chọn tất cả ({cartItems.length} mục)</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="font-medium text-gray-900">Chọn tất cả ({cartItems.length} mục)</span>
+                </label>
+                
+                <Popconfirm
+                  title="Xóa tất cả sản phẩm"
+                  description="Bạn có chắc chắn muốn xóa tất cả sản phẩm khỏi giỏ hàng?"
+                  onConfirm={clearAllItems}
+                  okText="Xóa tất cả"
+                  cancelText="Hủy"
+                  okType="danger"
+                >
+                  <button className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span className="text-sm font-medium">Xóa tất cả</span>
+                  </button>
+                </Popconfirm>
+              </div>
             </div>
 
             <div className="bg-white rounded-lg shadow-sm">
