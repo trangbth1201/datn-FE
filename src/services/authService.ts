@@ -321,12 +321,12 @@ export const userGetOrder = async (userId: string) => {
   }
 };
 
-export const cancelOrderApi = async (orderId: string) => {
+export const cancelOrderApi = async (orderId: string, reason: string) => {
 // export const cancelOrderApi = async (orderId: string, token: string) => {
   try {
     const res = await axios.patch(
       `/order/status/${orderId}`,
-      { status: 5 },
+      { status: 5 , paymentStatus: 3, reason }
       // {
       //   headers: {
       //     Authorization: `Bearer ${token}`,
