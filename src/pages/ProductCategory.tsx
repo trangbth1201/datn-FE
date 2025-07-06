@@ -208,50 +208,50 @@ export default function ProductCategory() {
     if (expandedParam && parentCategories) setExpandedCategorySlug(expandedParam);
   }, [expandedParam, parentCategories]);
 
-const filteredProducts: IProduct[] = useMemo(() => {
-  if (!activeProducts) return [];
-  console.log('Search query:', decodeURIComponent(searchQuery)); // Debug
-  console.log('Active products:', activeProducts.map(p => ({ name: p.name, slug: p.slug }))); // Debug
-  let filtered = activeProducts.filter(product => {
-    const matchCat = selectedCategoryId === 'all' || product.categoryId === selectedCategoryId;
-    const matchBrand = selectedBrandId === 'all' || product.brandId === selectedBrandId;
-    const matchSize = selectedSizes.length === 0 || (product.variation?.some(v => v.attributes?.some(attr => attr.attributeName === 'Kích Thước' && attr.values.some(val => selectedSizes.includes(val)))) ?? false);
-    const price = product.variation?.[0]?.salePrice > 0 ? product.variation[0].salePrice : product.variation?.[0]?.regularPrice || 0;
-    let matchPrice = true;
-    if (priceRange !== 'all') {
-      const [min, max] = priceRange.split('-').map(Number);
-      matchPrice = max ? price >= min && price <= max : price >= min;
-    }
-    const matchColor = selectedColors.length === 0 || (product.variation?.some(v => v.attributes?.some(attr => attr.attributeName === 'Màu sắc' && attr.values.some(val => selectedColors.includes(val)))) ?? false);
-    const matchRating = selectedRating === 'all' || (product.averageRating && (selectedRating === '5' ? product.averageRating === 5 : product.averageRating >= Number(selectedRating)));
-    const normalizedQuery = removeDiacritics(decodeURIComponent(searchQuery).toLowerCase());
-    const matchSearch = searchQuery
-      ? removeDiacritics(product.name.toLowerCase()).includes(normalizedQuery) ||
+  const filteredProducts: IProduct[] = useMemo(() => {
+    if (!activeProducts) return [];
+    console.log('Search query:', decodeURIComponent(searchQuery));
+    console.log('Active products:', activeProducts.map(p => ({ name: p.name, slug: p.slug })));
+    let filtered = activeProducts.filter(product => {
+      const matchCat = selectedCategoryId === 'all' || product.categoryId === selectedCategoryId;
+      const matchBrand = selectedBrandId === 'all' || product.brandId === selectedBrandId;
+      const matchSize = selectedSizes.length === 0 || (product.variation?.some(v => v.attributes?.some(attr => attr.attributeName === 'Kích Thước' && attr.values.some(val => selectedSizes.includes(val)))) ?? false);
+      const price = product.variation?.[0]?.salePrice > 0 ? product.variation[0].salePrice : product.variation?.[0]?.regularPrice || 0;
+      let matchPrice = true;
+      if (priceRange !== 'all') {
+        const [min, max] = priceRange.split('-').map(Number);
+        matchPrice = max ? price >= min && price <= max : price >= min;
+      }
+      const matchColor = selectedColors.length === 0 || (product.variation?.some(v => v.attributes?.some(attr => attr.attributeName === 'Màu sắc' && attr.values.some(val => selectedColors.includes(val)))) ?? false);
+      const matchRating = selectedRating === 'all' || (product.averageRating && (selectedRating === '5' ? product.averageRating === 5 : product.averageRating >= Number(selectedRating)));
+      const normalizedQuery = removeDiacritics(decodeURIComponent(searchQuery).toLowerCase());
+      const matchSearch = searchQuery
+        ? removeDiacritics(product.name.toLowerCase()).includes(normalizedQuery) ||
         removeDiacritics(product.slug.toLowerCase()).includes(normalizedQuery) ||
         (product.description && removeDiacritics(product.description.toLowerCase()).includes(normalizedQuery))
-      : true;
-    console.log(`Product: ${product.name}, Slug: ${product.slug}, Matches search: ${matchSearch}`); // Debug
-    return matchCat && matchBrand && matchSize && matchPrice && matchColor && matchRating && matchSearch;
-  });
+        : true;
+      console.log(`Product: ${product.name}, Slug: ${product.slug}, Matches search: ${matchSearch}`);
+      return matchCat && matchBrand && matchSize && matchPrice && matchColor && matchRating && matchSearch;
+    });
 
-  if (sortBy === 'price-asc') {
-    filtered.sort((a, b) => {
-      const priceA = a.variation?.[0]?.salePrice > 0 ? a.variation[0].salePrice : a.variation?.[0]?.regularPrice || 0;
-      const priceB = b.variation?.[0]?.salePrice > 0 ? b.variation[0].salePrice : b.variation?.[0]?.regularPrice || 0;
-      return priceA - priceB;
-    });
-  } else if (sortBy === 'price-desc') {
-    filtered.sort((a, b) => {
-      const priceA = a.variation?.[0]?.salePrice > 0 ? a.variation[0].salePrice : a.variation?.[0]?.regularPrice || 0;
-      const priceB = b.variation?.[0]?.salePrice > 0 ? b.variation[0].salePrice : b.variation?.[0]?.regularPrice || 0;
-      return priceB - priceA;
-    });
-  } else if (sortBy === 'newest') {
-    filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
-  console.log('Filtered products:', filtered.map(p => p.name)); // Debug
-  return filtered;
-}, [activeProducts, selectedCategoryId, selectedBrandId, sortBy, selectedSizes, priceRange, selectedColors, selectedRating, searchQuery]);
+    if (sortBy === 'price-asc') {
+      filtered.sort((a, b) => {
+        const priceA = a.variation?.[0]?.salePrice > 0 ? a.variation[0].salePrice : a.variation?.[0]?.regularPrice || 0;
+        const priceB = b.variation?.[0]?.salePrice > 0 ? b.variation[0].salePrice : b.variation?.[0]?.regularPrice || 0;
+        return priceA - priceB;
+      });
+    } else if (sortBy === 'price-desc') {
+      filtered.sort((a, b) => {
+        const priceA = a.variation?.[0]?.salePrice > 0 ? a.variation[0].salePrice : a.variation?.[0]?.regularPrice || 0;
+        const priceB = b.variation?.[0]?.salePrice > 0 ? b.variation[0].salePrice : b.variation?.[0]?.regularPrice || 0;
+        return priceB - priceA;
+      });
+    } else if (sortBy === 'newest') {
+      filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+    console.log('Filtered products:', filtered.map(p => p.name));
+    return filtered;
+  }, [activeProducts, selectedCategoryId, selectedBrandId, sortBy, selectedSizes, priceRange, selectedColors, selectedRating, searchQuery]);
 
   const paginatedProducts: IProduct[] = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
@@ -500,7 +500,7 @@ const filteredProducts: IProduct[] = useMemo(() => {
             )}
             {priceRange !== 'all' && (
               <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm flex items-center gap-2">
-                Giá: {priceRange === '3000000' ? '3,000,000+ VND' : `${priceRange.split('-').map(v => Number(v).toLocaleString('vi-VN')).join(' - ')} VND`}
+                Giá: {priceRange === '12000000' ? '12,000,000+ VND' : `${priceRange.split('-').map(v => Number(v).toLocaleString('vi-VN')).join(' - ')} VND`}
                 <button className="text-red-500 hover:text-red-700" onClick={() => { setPriceRange('all'); setCurrentPage(1); updateUrlParams(selectedCategoryId, selectedBrandId, expandedCategorySlug, 1); }}>✕</button>
               </span>
             )}
@@ -591,12 +591,12 @@ const filteredProducts: IProduct[] = useMemo(() => {
                 style={{ width: '100%' }}
               >
                 <Option value="all">Tất cả</Option>
-                <Option value="0-500000">0 - 500,000 VND</Option>
-                <Option value="500000-1000000">500,000 - 1,000,000 VND</Option>
-                <Option value="1000000-2000000">1,000,000 - 2,000,000 VND</Option>
-                <Option value="2000000-3000000">2,000,000 - 3,000,000 VND</Option>
-                <Option value="3000000-5000000">3,000,000 - 5,000,000 VND</Option>
-                <Option value="5000000">5,000,000+ VND</Option>
+                <Option value="0-2000000">0 - 2,000,000 VND</Option>
+                <Option value="2000000-5000000">2,000,000 - 5,000,000 VND</Option>
+                <Option value="5000000-8000000">5,000,000 - 8,000,000 VND</Option>
+                <Option value="8000000-10000000">8,000,000 - 10,000,000 VND</Option>
+                <Option value="10000000-12000000">10,000,000 - 12,000,000 VND</Option>
+                <Option value="12000000">12,000,000+ VND</Option>
               </Select>
             </div>
             <div>
@@ -611,7 +611,10 @@ const filteredProducts: IProduct[] = useMemo(() => {
                 {availableColors.map(color => (
                   <Option key={color} value={color}>
                     <div className="flex items-center">
-                      <span className="inline-block w-4 h-4 mr-2 rounded" style={{ backgroundColor: color }}></span>
+                      <span
+                        className={`inline-block w-4 h-4 mr-2 rounded ${color.toLowerCase() === 'white' || color === '#ffffff' ? 'border border-gray-600' : ''}`}
+                        style={{ backgroundColor: color }}
+                      ></span>
                     </div>
                   </Option>
                 ))}
