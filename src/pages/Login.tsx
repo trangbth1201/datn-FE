@@ -8,8 +8,6 @@ import { useState } from "react";
 import { useAuth } from "../auth/AuthContext ";
 import { login } from "../services/authService";
 import GoogleLoginButton from "../components/GoogleLoginButton";
-import ChatWindow from "../components/ChatWindow";
-// <-- Context login
 
 const Login: React.FC = () => {
     const [showPass, setShowPass] = useState(false);
@@ -79,7 +77,7 @@ const Login: React.FC = () => {
                                 </div>
                                 <div className="flex justify-between">
                                     <div className="flex items-center ">
-                                        <input type="checkbox" id="check" />
+                                        <input type="checkbox" id="check" checked />
                                         <label htmlFor="check" className="form-text ml-2">Duy trì đăng nhập</label>
                                     </div>
                                     <a href="/forgot-password" className="form-text">Quên mật khẩu</a>

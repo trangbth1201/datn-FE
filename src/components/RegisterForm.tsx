@@ -7,6 +7,7 @@ import Google from "../assets/image/google.svg";
 import { register } from "../services/authService";
 import Swal from "sweetalert2";
 import { getPasswordStrength, validatePasswordRules } from "../utils/function";
+import GoogleLoginButton from "./GoogleLoginButton";
 
 interface RegisterFormProps {
     onRegisterSuccess: (email: string) => void;
@@ -29,7 +30,18 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
     const toggleOldPassword = () => {
         setShowPass(!showPass);
     };
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (!isStepValid()) return; 
 
+            if (current < steps.length - 1) {
+                next();
+            } else {
+                handleSubmit(e as any); 
+            }
+        }
+    };
     const strengthColor = {
         Yếu: "text-red-500 ",
         "Trung bình": "text-yellow-500",
@@ -128,9 +140,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
                                 }
                             />
                             <label className="user-label">Nhập mật khẩu</label>
-                            {/* <div className="changepass" onClick={toggleOldPassword}>
+                            <div className="changepass" onClick={toggleOldPassword} style={{top:"25%"}}>
                                 {showPass ? <EyeInvisibleFilled /> : <EyeFilled />}
-                            </div> */}
+                            </div>
                         </div>
                         <div className="flex gap-4 items-center justify-between my-2">
                             <div
@@ -190,7 +202,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
     return (
         <>
             <div className="auth-form">
-                <form action="">
+                <form onKeyDown={handleKeyDown}>
                     <div style={{ width: "100%", margin: "auto" }}>
                         <div
                             style={{
@@ -251,9 +263,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
                     <div className="bg-blue-700 flex items-center justify-center social">
                         <img src={Facebook} />
                     </div>
-                    <div className="flex items-center justify-center border border-black border-solid social">
-                        <img src={Google} alt="" />
-                    </div>
+                    <GoogleLoginButton />
                 </div>
                 <span className="text-center block mt-8">
                     Bạn đã có tài khoản?{" "}

@@ -301,17 +301,24 @@ export const userChangePass = async (
   }
 };
 
-export const userGetOrder = async (token?: string) => {
+export const userGetOrder = async () => {
   try {
+    const token = localStorage.getItem("token"); 
     const response = await axios.get(`/order/user`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
-    return { success: true, data: response.data };
+
+    return {
+      success: true,
+      data: response.data,
+    };
   } catch (error: any) {
     console.error("Lỗi chi tiết:", error);
     return {
       success: false,
-      message: error?.response?.data?.message || "Không thể lấy danh sách đơn hàng",
+      message: error.response?.data?.message || "Không thể lấy danh sách đơn hàng",
     };
   }
 };
