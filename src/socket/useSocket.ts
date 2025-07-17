@@ -16,7 +16,6 @@ export const useSocket = () => {
     console.log("[socket] Connecting to server...");
 
     socket.on("connect", () => {
-      console.log("[socket] Connected to server", socket.id);
       socket.emit("check-account-status", user?._id);
       socket.emit("join-room", user?._id);
     });
@@ -25,7 +24,6 @@ export const useSocket = () => {
     // check trạng thái tài khoản
     socket.off("account-status");
     socket.on("account-status", (data) => {
-      console.log("[socket] Received account-status:", data);
 
       if (!data.isActive) {
         Swal.fire({

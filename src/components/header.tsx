@@ -61,18 +61,6 @@ const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [location.pathname]);
 
-  // const popoverContent = (
-  //   <div className="min-w-[180px]">
-  //     <p className="font-semibold text-center">
-  //       <Link className="block" to={"user/info"}>Thông tin tài khoản</Link>
-  //       <Link className="block" to={"user/order"}>Đơn hàng của tôi</Link>
-  //       <Link className="block" to={"user/changepassword"}>Đổi mật khẩu</Link>
-  //     </p>
-  //     <Button type="text" danger block onClick={logout}>
-  //       Đăng xuất
-  //     </Button>
-  //   </div>
-  // );
 
   return (
     <header className={isHome ? "active" : ""}>

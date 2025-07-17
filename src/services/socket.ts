@@ -1,9 +1,13 @@
-import { io, Socket } from "socket.io-client";
+import { io } from "socket.io-client";
 
-const socket: Socket = io("http://localhost:8080", {
-  autoConnect: true,
-  withCredentials: true,
+const token = localStorage.getItem("token");
+
+const socket = io("http://localhost:8080", {
+  autoConnect: false, 
   transports: ["websocket"],
+  auth: {
+    token, 
+  },
 });
 
 export default socket;
