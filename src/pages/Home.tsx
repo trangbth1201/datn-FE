@@ -120,8 +120,8 @@ const filteredProducts = useMemo(() => {
   return (
     <>
       <Carousel>
-        {banner.map((item) => (
-          <div className="banner-item">
+        {banner.map((item ,index) => (
+          <div key={index} className="banner-item">
             <img src={ImageSlide} />
             <div className="slogan">
               <p>{item.name}</p>
@@ -132,8 +132,8 @@ const filteredProducts = useMemo(() => {
       </Carousel>
       <div className="container mx-auto">
         <div className="grid grid-cols-3 gap-4">
-          {productHot.map((item) => (
-            <div className="p-4">
+          {productHot.map((item ,index) => (
+            <div key={index} className="p-4">
               <div className="hot-product">
                 <div className="hot-name">{item.name}</div>
                 <div className="hot-price">
