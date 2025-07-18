@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { BrowserRouter } from 'react-router-dom' 
 import { AuthProvider } from './auth/AuthContext '
+import { CartProvider } from './auth/CartContext'
 
 const queryClient = new QueryClient()
 const clientId = "722000405898-5olhskhe32kqcfbnq31s6jp2bphtpqst.apps.googleusercontent.com";
@@ -17,7 +18,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <GoogleOAuthProvider clientId={clientId}>
         <BrowserRouter> 
           <AuthProvider>
+            <CartProvider>
             <App />
+            </CartProvider>
           </AuthProvider>
         </BrowserRouter>
       </GoogleOAuthProvider>
