@@ -76,6 +76,7 @@ export interface IOrder {
   updatedAt: string;
   userId: string;
   voucherId: string[];
+  price: number
 }
 
 export interface OrderItem {
@@ -94,6 +95,7 @@ export interface OrderItem {
   regularPrice: number;
   salePrice: number;
   cartItemId?: string;
+  slug?: string;
 }
 
 interface RecipientInfo {
