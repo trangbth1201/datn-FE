@@ -112,13 +112,13 @@ const OrderDetail = () => {
   };
 
   const fetchReturnRequest = async () => {
-        const res = await getReturnRequest(orderId);
-        console.log("Return Request Response:", res);
-        
-        if (res && typeof res.data.status === "number") {
-          setReturnRequest(res.data.status);
-        }
-    };
+    const res = await getReturnRequest(orderId);
+    console.log("Return Request Response:", res);
+
+    if (res && typeof res.data.status === "number") {
+      setReturnRequest(res.data.status);
+    }
+  };
 
   useEffect(() => {
     fetchOrder();
@@ -366,8 +366,8 @@ const OrderDetail = () => {
     }
   };
   console.log("Return Request Status:", returnRequest);
-  
-  
+
+
 
   const productColumns = [
     {
@@ -486,11 +486,11 @@ const OrderDetail = () => {
                   Yêu cầu trả hàng
                 </Tag>
                 <p className="mt-2 text-purple-500 italic text-sm">
-                    {returnRequest === 0 && "Đang xử lý yêu cầu trả hàng"}
-                    {returnRequest === 1 && "Yêu cầu trả hàng đã được chấp nhận, vui lòng gửi hàng"}
-                    {returnRequest === 2 && "Shop đã nhận được hàng"}
-                    {returnRequest === 3 && "Shop đã hoàn tiền cho bạn, vui lòng kiểm tra ví của bạn"}
-                    {returnRequest === 4 && "Yêu cầu trả hàng đã bị từ chối, vui lòng liên hệ với shop để biết thêm chi tiết"}
+                  {returnRequest === 0 && "Đang xử lý yêu cầu trả hàng"}
+                  {returnRequest === 1 && "Yêu cầu trả hàng đã được chấp nhận, vui lòng gửi hàng"}
+                  {returnRequest === 2 && "Shop đã nhận được hàng"}
+                  {returnRequest === 3 && "Shop đã hoàn tiền cho bạn, vui lòng kiểm tra ví của bạn"}
+                  {returnRequest === 4 && "Yêu cầu trả hàng đã bị từ chối, vui lòng liên hệ với shop để biết thêm chi tiết"}
                 </p>
               </>
             ) : (
@@ -732,6 +732,34 @@ const OrderDetail = () => {
               >
                 Quay lại
               </AntButton>
+              {order.status === 4 && order.items && order.items.length > 0 && order.review === 0 && (
+                <AntButton
+                  type="primary"
+                  onClick={() => {
+                    const items = order.items;
+                    if (!items || items.length === 0) {
+                      console.error("No products found in order items:", order.items);
+                      message.error("Không có sản phẩm nào trong đơn hàng để đánh giá.");
+                      return;
+                    }
+                    navigate(
+                      `/review?orderId=${order._id}`,
+                      {
+                        state: {
+                          items: items.map((item) => ({
+                            productId: item.productId,
+                            name: item.productName,
+                          })),
+                          orderId: order._id,
+                        },
+                      }
+                    );
+                  }}
+                  className="bg-blue-500 hover:bg-blue-600 text-white ml-2"
+                >
+                  Đánh giá
+                </AntButton>
+              )}
             </Space>
           </Card>
         </Col>

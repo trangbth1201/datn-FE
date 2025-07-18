@@ -359,20 +359,20 @@ header {
     height: 24px;
   }
 
-  &::before {
-    content: "";
-    position: absolute;
-    width: 1px;
-    left: 0;
-    height: 22px;
-    background: variables.$white;
-  }
+  // &::before {
+  //   content: "";
+  //   position: absolute;
+  //   width: 1px;
+  //   left: 0;
+  //   height: 22px;
+  //   background: variables.$white;
+  // }
 
-  &:first-child {
-    &::before {
-      display: none;
-    }
-  }
+  // &:first-child {
+  //   &::before {
+  //     display: none;
+  //   }
+  // }
 }
 
 //footer

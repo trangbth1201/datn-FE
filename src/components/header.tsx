@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Logo from "../assets/image/logo.png";
@@ -8,6 +9,9 @@ import { useAuth } from "../auth/AuthContext ";
 import Avatar from "antd/es/avatar";
 import Popover from "antd/es/popover";
 import Search from "../components/search";
+import { useQuery } from "@tanstack/react-query";
+import { cartService } from "../services/cart.service";
+import { useCart } from "../auth/CartContext";
 
 interface HeaderProps {
   isHome: boolean;
@@ -17,6 +21,40 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const { cartCount, updateCartCount } = useCart();
+
+  const { data: cartData, refetch } = useQuery({
+    queryKey: ["cart"],
+    queryFn: cartService.getCart,
+    enabled: true,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (cartData) {
+      updateCartCount(cartData);
+    } else {
+      const cartCookie = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("cart="))
+        ?.split("=")[1];
+      if (cartCookie) {
+        const cartItems: any[] = JSON.parse(decodeURIComponent(cartCookie));
+        updateCartCount({ cart: cartItems, success: true });
+      } else {
+        updateCartCount({ cart: [], success: true });
+      }
+    }
+  }, [cartData, updateCartCount]);
+
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      refetch();
+    };
+
+    window.addEventListener("cartUpdated", handleCartUpdate);
+    return () => window.removeEventListener("cartUpdated", handleCartUpdate);
+  }, [refetch]);
 
   const popoverContent = (
     <div className="min-w-[180px]">
@@ -42,7 +80,7 @@ const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
   );
 
   useEffect(() => {
-    if (location.pathname !== "/") return; // Chỉ áp dụng trên trang chủ
+    if (location.pathname !== "/") return;
 
     const handleScroll = () => {
       const header = document.querySelector("header");
@@ -61,18 +99,8 @@ const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [location.pathname]);
 
-  // const popoverContent = (
-  //   <div className="min-w-[180px]">
-  //     <p className="font-semibold text-center">
-  //       <Link className="block" to={"user/info"}>Thông tin tài khoản</Link>
-  //       <Link className="block" to={"user/order"}>Đơn hàng của tôi</Link>
-  //       <Link className="block" to={"user/changepassword"}>Đổi mật khẩu</Link>
-  //     </p>
-  //     <Button type="text" danger block onClick={logout}>
-  //       Đăng xuất
-  //     </Button>
-  //   </div>
-  // );
+  console.log("user", user);
+
 
   return (
     <header className={isHome ? "active" : ""}>
@@ -102,7 +130,7 @@ const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
             <li className="right-item">
               <Search />
               <div className="header-icon">
-                <a href="/cart" className="cart-icon" data-count="10">
+                <a href="/cart" className="cart-icon" data-count={cartCount || 0}>
                   <img src={Bag} className="bag-light" />
                   <img src={BagDark} className="bag-dark" />
                 </a>
@@ -115,17 +143,28 @@ const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
                     className="cursor-pointer"
                     placement="bottomRight"
                   >
-                    <Avatar
-                      size={30}
-                      src={user?.avatar || undefined}
-                      style={{
-                        backgroundColor: "#7265e6",
-                        verticalAlign: "middle",
-                      }}
-                    >
-                      {!user?.avatar &&
-                        user?.fullName?.charAt(0)?.toUpperCase()}
-                    </Avatar>
+                    {user.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt="avatar"
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    ) : (
+                      <Avatar
+                        size={32}
+                        style={{
+                          backgroundColor: "#7265e6",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        {user?.fullName?.charAt(0)?.toUpperCase()}
+                      </Avatar>
+                    )}
                   </Popover>
                 ) : (
                   <a href="/login">
@@ -133,6 +172,7 @@ const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
                   </a>
                 )}
               </div>
+
             </li>
           </ul>
         </div>

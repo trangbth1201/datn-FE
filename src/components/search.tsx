@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { AutoComplete, Input, Modal, Spin } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
-import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { productService } from '../services/product.service';
+import { AutoComplete, Input, Modal, Spin } from 'antd';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { IProduct } from '../interface/product.interface';
+import { productService } from '../services/product.service';
 import { removeDiacritics } from '../utils/string';
 
 const Search: React.FC = () => {
@@ -12,9 +12,7 @@ const Search: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [options, setOptions] = useState<{ value: string; label: React.ReactNode }[]>([]);
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Lấy danh sách sản phẩm
   const { data: productsData, isLoading } = useQuery<{ docs: IProduct[] }>({
     queryKey: ['products'],
     queryFn: productService.getAllProducts,
@@ -74,10 +72,7 @@ const Search: React.FC = () => {
     if (searchQuery.trim()) {
       const params = new URLSearchParams();
       params.set('search', encodeURIComponent(searchQuery.trim()));
-      const path = location.pathname.startsWith('/products/brand/')
-        ? location.pathname
-        : '/products';
-      const url = `${path}?${params.toString()}`;
+      const url = `/products?${params.toString()}`;
       console.log('Navigating to:', url);
       navigate(url);
       setIsModalVisible(false);
@@ -103,10 +98,7 @@ const Search: React.FC = () => {
           onSelect={(value) => {
             const params = new URLSearchParams();
             params.set('search', encodeURIComponent(value));
-            const path = location.pathname.startsWith('/products')
-              ? location.pathname
-              : '/products';
-            const url = `${path}?${params.toString()}`;
+            const url = `/products?${params.toString()}`;
             console.log('Navigating from suggestion:', url);
             navigate(url);
             setIsModalVisible(false);

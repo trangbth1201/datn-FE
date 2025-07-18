@@ -374,6 +374,34 @@ const Order = () => {
                 >
                   Xem
                 </AntButton>
+                {order.status === 4 && order.items && order.items.length > 0 && order.review === 0 && (
+                  <AntButton
+                    type="primary"
+                    size="small"
+                    onClick={() => {
+                      if (!order.items || order.items.length === 0) {
+                        console.error("No products found in order items:", order.items);
+                        message.error("Không có sản phẩm nào trong đơn hàng để đánh giá.");
+                        return;
+                      }
+                      navigate(
+                        `/review?orderId=${order._id}`,
+                        {
+                          state: {
+                            items: order.items.map((item) => ({
+                              productId: item.productId,
+                              name: item.productName
+                            })),
+                            orderId: order._id,
+                          },
+                        }
+                      );
+                    }}
+                    className="bg-blue-500 hover:bg-blue-600"
+                  >
+                    Đánh giá
+                  </AntButton>
+                )}
                 {(order.status === 0 || order.status === 1) && (
                   <AntButton
                     danger

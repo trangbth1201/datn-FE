@@ -1,14 +1,18 @@
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
+import { ICartItem, ICartResponse } from "../interface/cart.interface";
 
-const API_URL = "http://localhost:8080/api";
+const API_URL = "http://localhost:8080/api/cart";
 
 export const cartService = {
-  getCart: async () => {
+  getCart: async (): Promise<ICartResponse> => {
     try {
-      const response = await axios.get(`${API_URL}/cart`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      localStorage.setItem("cartitem", response.data.cartItem);
+      const response = await axiosInstance.get(`${API_URL}`);
+      console.log("API getCart trả về:", response.data);
+
+      const cartItem = response.data?.cart;
+      if (cartItem && cartItem.length > 0) {
+        localStorage.setItem("cartitem", JSON.stringify(cartItem));
+      }
       return response.data;
     } catch (error: any) {
       console.error(
@@ -19,16 +23,11 @@ export const cartService = {
     }
   },
 
-  addToCart: async (cartItem: {
-    productId: string;
-    variantId: string;
-    quantity: number;
-  }) => {
+
+  addToCart: async (cartItem: ICartItem): Promise<ICartResponse> => {
     try {
       console.log("Sending cartItem to add:", cartItem);
-      const response = await axios.post(`${API_URL}/cart`, cartItem, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+      const response = await axiosInstance.post(`${API_URL}`, cartItem);
       console.log("Add to cart response:", response.data);
       return response.data;
     } catch (error: any) {
@@ -40,11 +39,11 @@ export const cartService = {
     }
   },
 
-  removeCart: async (cartItem: { productId: string; variantId: string }) => {
+  removeCart: async (
+    cartItem: Pick<ICartItem, "productId" | "variantId">
+  ): Promise<ICartResponse> => {
     try {
-      const response = await axios.post(`${API_URL}/cart/remove`, cartItem, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+      const response = await axiosInstance.post(`${API_URL}/remove`, cartItem);
       console.log("Remove cart response:", response.data);
       return response.data;
     } catch (error: any) {
@@ -56,15 +55,9 @@ export const cartService = {
     }
   },
 
-  updateCartQuantity: async (cartItem: {
-    productId: string;
-    variantId: string;
-    quantity: number;
-  }) => {
+  updateCartQuantity: async (cartItem: ICartItem): Promise<ICartResponse> => {
     try {
-      const response = await axios.patch(`${API_URL}/cart/update`, cartItem, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+      const response = await axiosInstance.patch(`${API_URL}/update`, cartItem);
       console.log("Update cart quantity response:", response.data);
       return response.data;
     } catch (error: any) {
@@ -76,14 +69,9 @@ export const cartService = {
     }
   },
 
-  syncCart: async (cartData: {
-    userId: string;
-    items: { productId: string; variantId: string; quantity: number }[];
-  }) => {
+  syncCart: async (cartData: { userId: string; items: ICartItem[] }): Promise<ICartResponse> => {
     try {
-      const response = await axios.post(`${API_URL}/cart/sync`, cartData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+      const response = await axiosInstance.post(`${API_URL}/sync`, cartData);
       console.log("Sync cart response:", response.data);
       return response.data;
     } catch (error: any) {

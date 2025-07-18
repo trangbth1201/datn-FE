@@ -68,6 +68,19 @@ export const orderService = {
     }
   },
 
+  // Cập nhật trạng thái đánh giá
+  updateReviewStatus: async (orderId: string, review: number) => {
+    try {
+      const response = await axios.patch(`${API_URL}/order/status/${orderId}`, {
+        review,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi khi cập nhật trạng thái đánh giá:", error);
+      throw error;
+    }
+  },
+
   // Cập nhật trạng thái thanh toán
   updatePaymentStatus: async (orderId: string, paymentStatus: number) => {
     try {
