@@ -6,12 +6,3 @@ export const removeDiacritics = (str: string): string => {
     .replace(/đ/g, 'd')
     .replace(/Đ/g, 'D');
 };
-
-export const toSlug = (str: string): string => {
-  return removeDiacritics(str)
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-};
