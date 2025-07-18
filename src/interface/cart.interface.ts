@@ -12,7 +12,8 @@ export interface ICart {
 }
 
 export interface ICartResponse {
-  data: ICart;
+  cart: ICartItem[];
   message?: string;
   success: boolean;
+  total?: number;
 }

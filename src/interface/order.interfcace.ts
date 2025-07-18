@@ -76,6 +76,7 @@ export interface IOrder {
   updatedAt: string;
   userId: string;
   voucherId: string[];
+  review: number;
 }
 
 export interface OrderItem {
