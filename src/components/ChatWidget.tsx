@@ -3,9 +3,12 @@ import { FaPaperPlane, FaTimes } from "react-icons/fa";
 import { sendMess } from "../services/ChatBox";
 import { getConversation, subscribeToMessages } from "../services/ChatClient";
 import socket from "../services/socket";
+import EmojiPicker from "emoji-picker-react";
+import { FaImage } from "react-icons/fa";
+import axios from "axios";
 
 type Sender = "user" | "admin";
-type Message = { sender: Sender; text: string };
+type Message = { sender: Sender; text: string  , image: string};
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,13 +17,56 @@ export default function ChatWidget() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const emojiRef = useRef<HTMLDivElement>(null);
   const isLoaded = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const userId = localStorage.getItem("userId") ?? "";
   const token = localStorage.getItem("token") ?? "";
+
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !conversationId) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("conversationId", conversationId);
+
+    try {
+      const res = await axios.post("/chat/upload", formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      setMessages((prev) => [
+        ...prev,
+        { sender: "user", text: "[ảnh]", image: res.data.url },
+      ]);
+    } catch (error) {
+      console.error("Upload ảnh thất bại:", error);
+    }
+  };
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        emojiRef.current &&
+        !emojiRef.current.contains(event.target as Node)
+      ) {
+        setShowEmoji(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Socket connection
   useEffect(() => {
@@ -49,10 +95,11 @@ export default function ChatWidget() {
         const converted: Message[] = data.messages.map((msg: any) => ({
           sender: msg.senderId === userId ? "user" : "admin",
           text: msg.content,
+          image : msg.image
         }));
         setMessages(converted);
         setConversationId(data._id);
-        socket.emit("join-conversation", data._id); 
+        socket.emit("join-conversation", data._id);
         isLoaded.current = true;
       } catch (err) {
         console.error("Không thể tải tin nhắn:", err);
@@ -71,7 +118,7 @@ export default function ChatWidget() {
       if (msg.senderId !== userId) {
         setMessages((prev) => [
           ...prev,
-          { sender: "admin", text: msg.content },
+          { sender: "admin", text: msg.content  , image: msg.image},
         ]);
       }
     });
@@ -83,7 +130,7 @@ export default function ChatWidget() {
     if (!input.trim() || !conversationId) return;
 
     const content = input.trim();
-    setMessages((prev) => [...prev, { sender: "user", text: content }]);
+    setMessages((prev) => [...prev, { sender: "user", text: content ,}]);
     setInput("");
 
     try {
@@ -95,8 +142,8 @@ export default function ChatWidget() {
 
   const handleClose = () => {
     setIsOpen(false);
-    isLoaded.current = false; 
-    setMessages([]); 
+    isLoaded.current = false;
+    setMessages([]);
     setConversationId(null);
   };
 
@@ -110,35 +157,89 @@ export default function ChatWidget() {
               <FaTimes className="w-4 h-4" />
             </button>
           </div>
-          
+
           <div className="flex-1 p-3 overflow-y-auto space-y-2">
             {messages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`w-fit max-w-[80%] p-2 rounded-lg text-sm break-words whitespace-pre-wrap ${
-                  msg.sender === "user"
-                    ? "bg-blue-100 self-end ml-auto"
-                    : "bg-gray-200"
-                }`}
+                className={`w-fit max-w-[80%] p-2 rounded-lg text-sm break-words whitespace-pre-wrap ${msg.sender === "user"
+                  ? "bg-blue-100 self-end ml-auto"
+                  : "bg-gray-200"
+                  }`}
               >
                 {msg.text}
               </div>
             ))}
             <div ref={chatEndRef} />
           </div>
-          <div className="p-3 border-t flex items-center gap-2">
+          <div className="p-3 border-t flex items-center gap-2 relative">
+            {/* Emoji Button */}
+            <button
+              onClick={() => setShowEmoji((prev) => !prev)}
+              className="text-xl px-1"
+              title="Chèn emoji"
+            >
+              😊
+            </button>
+
+            {/* Emoji Picker */}
+            {showEmoji && (
+              <div className="absolute bottom-14 left-0 z-50">
+                <EmojiPicker
+                  onEmojiClick={(emojiData) =>
+                    setInput((prev) => prev + emojiData.emoji)
+                  }
+                  height={350}
+                  width={280}
+                />
+              </div>
+            )}
+
+            {/* Hidden Image Input */}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+              ref={fileInputRef}
+            />
+
+            {/* Image Button */}
+            <button
+              onClick={() => {
+                setShowEmoji(false);
+                fileInputRef.current?.click();
+              }}
+              className="text-green-600"
+              title="Gửi ảnh"
+            >
+              <FaImage className="w-5 h-5" />
+            </button>
+
+            {/* Text Input */}
             <input
               type="text"
               className="flex-1 border rounded-lg px-2 py-1 text-sm"
               placeholder="Nhập tin nhắn..."
               value={input}
+              onClick={() => setShowEmoji(false)}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
             />
-            <button onClick={handleSend} className="text-blue-600">
+
+            {/* Send Button */}
+            <button
+              onClick={() => {
+                setShowEmoji(false);
+                handleSend();
+              }}
+              className="text-blue-600"
+              title="Gửi"
+            >
               <FaPaperPlane className="w-4 h-4" />
             </button>
           </div>
+
         </div>
       ) : (
         <button
