@@ -1,7 +1,4 @@
-import axios from "axios";
-
-axios.defaults.baseURL = 'http://localhost:8080/api/';
-axios.defaults.withCredentials = true;
+import axiosInstance from "../utils/axiosInstance";
 
 interface User {
   _id: string;
@@ -16,16 +13,24 @@ interface User {
   updatedAt: string;
 }
 
-
 export interface LoginResponse {
   message: string;
   user: User;
   accessToken: string;
 }
 
-export const login = async (email: string, password: string): Promise<LoginResponse> => {
+export const login = async (
+  email: string,
+  password: string
+): Promise<LoginResponse> => {
   try {
-    const res = await axios.post<LoginResponse>("/login", { email, password });
+    const res = await axiosInstance.post<LoginResponse>("/login", {
+      email,
+      password,
+    });
+    localStorage.setItem("accessToken", res.data.accessToken);
+    localStorage.setItem("userId", res.data.user._id);
+    localStorage.setItem("user", JSON.stringify(res.data.user)); // Lưu user đầy đủ
     return res.data;
   } catch (err: any) {
     if (err.response?.data?.error) {
@@ -35,39 +40,54 @@ export const login = async (email: string, password: string): Promise<LoginRespo
   }
 };
 
-export const register = async (fullName: string, email: string, password: string, confirmPassword: string) => {
+export const refreshToken = async (): Promise<{ accessToken: string }> => {
   try {
-    const response = await axios.post('/register', {
-      fullName,
-      email,
-      password,
-      confirmPassword
-    });
+    const response = await axiosInstance.post<{ accessToken: string }>(
+      "/refresh-token"
+    );
     return response.data;
   } catch (error: any) {
-    console.error('Registration failed:', error);
     if (error.response) {
-      throw new Error(error.response.data.message || 'An error occurred during registration.');
+      throw new Error(error.response.data.error || "Không thể làm mới token");
     }
-    throw new Error('An unexpected error occurred.');
+    throw new Error("Lỗi kết nối hoặc server gặp sự cố. Vui lòng thử lại sau.");
   }
 };
 
+export const register = async (normallizedUser: {
+  fullName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}) => {
+  try {
+    const response = await axiosInstance.post("/register", {
+      ...normallizedUser,
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error("Registration failed:", error);
+    if (error.response) {
+      throw new Error(
+        error.response.data.message || "An error occurred during registration."
+      );
+    }
+    throw new Error("An unexpected error occurred.");
+  }
+};
 
 export const verifyOtp = async (email: string, otp: string) => {
   try {
-    const response = await axios.post('/verify-otp', {
+    const response = await axiosInstance.post("/verify-otp", {
       email,
       otp,
     });
     return response.data;
   } catch (error: any) {
-    // Kiểm tra nếu có lỗi phản hồi từ server
     if (error.response) {
       console.error("Lỗi xác thực OTP: ", error.response.data.message);
       throw new Error(error.response.data.message || "Xác thực OTP thất bại");
     } else if (error.request) {
-      // Nếu không có phản hồi từ server
       console.error("Không nhận được phản hồi từ server: ", error.request);
       throw new Error("Không nhận được phản hồi từ server. Vui lòng thử lại.");
     } else {
@@ -76,9 +96,10 @@ export const verifyOtp = async (email: string, otp: string) => {
     }
   }
 };
+
 export const ChangePassword = async (email: string, password: string) => {
   try {
-    const response = await axios.post('/reset-password', {
+    const response = await axiosInstance.post("/reset-password", {
       email,
       password,
     });
@@ -86,82 +107,116 @@ export const ChangePassword = async (email: string, password: string) => {
     if (response.status === 200) {
       return {
         success: true,
-        message: response.data.message || 'Mật khẩu đã được thay đổi thành công!'
+        message:
+          response.data.message || "Mật khẩu đã được thay đổi thành công!",
       };
     } else {
-      throw new Error('Không thể thay đổi mật khẩu. Vui lòng thử lại.');
+      throw new Error("Không thể thay đổi mật khẩu. Vui lòng thử lại.");
     }
   } catch (error: any) {
-    console.error('Đổi mật khẩu thất bại:', error);
+    console.error("Đổi mật khẩu thất bại:", error);
     if (error.response) {
-      const errorMessage = error.response.data.message || 'Có lỗi xảy ra khi đổi mật khẩu';
-      throw new Error(errorMessage); // Ném ra lỗi với thông báo cụ thể
+      const errorMessage =
+        error.response.data.message || "Có lỗi xảy ra khi đổi mật khẩu";
+      throw new Error(errorMessage);
     }
-
-    throw new Error('Lỗi kết nối hoặc server gặp sự cố. Vui lòng thử lại sau.');
+    throw new Error("Lỗi kết nối hoặc server gặp sự cố. Vui lòng thử lại sau.");
   }
 };
 
 export const sendOtpToEmail = async (email: string) => {
   try {
-    const response = await axios.post('/forgot-password', {
+    const response = await axiosInstance.post("/forgot-password", {
       email,
     });
     if (response.status === 200) {
-      return { success: true, message: 'Mã OTP đã được gửi vào email.' };
+      return { success: true, message: "Mã OTP đã được gửi vào email." };
     } else {
-      throw new Error(response.data.message || 'Không thể gửi OTP. Vui lòng thử lại.');
+      throw new Error(
+        response.data.message || "Không thể gửi OTP. Vui lòng thử lại."
+      );
     }
   } catch (error: any) {
-    console.error('Lỗi gửi OTP:', error);
+    console.error("Lỗi gửi OTP:", error);
     if (error.response) {
-      return { success: false, message: error.response.data.message || 'Có lỗi xảy ra khi gửi OTP' };
+      return {
+        success: false,
+        message: error.response.data.message || "Có lỗi xảy ra khi gửi OTP",
+      };
     } else if (error.request) {
-      return { success: false, message: 'Không có phản hồi từ server. Vui lòng kiểm tra kết nối.' };
+      return {
+        success: false,
+        message: "Không có phản hồi từ server. Vui lòng kiểm tra kết nối.",
+      };
     } else {
       return { success: false, message: `Lỗi: ${error.message}` };
     }
   }
 };
-
 
 export const verifyOtpToEmail = async (email: string, otp: string) => {
   try {
-    const response = await axios.post('/verify-reset-otp', { email, otp });
+    const response = await axiosInstance.post("/verify-reset-otp", {
+      email,
+      otp,
+    });
     if (response.status === 200) {
-      return { success: true, message: 'Xác thực OTP thành công' };
+      return { success: true, message: "Xác thực OTP thành công" };
     } else {
-      throw new Error(response.data.message || 'OTP chưa đúng. Vui lòng thử lại.');
+      throw new Error(
+        response.data.message || "OTP chưa đúng. Vui lòng thử lại."
+      );
     }
   } catch (error: any) {
-    console.error('Lỗi gửi OTP:', error);
+    console.error("Lỗi gửi OTP:", error);
 
     if (error.response) {
-      return { success: false, message: error.response.data.message || 'Có lỗi xảy ra khi gửi OTP' };
+      return {
+        success: false,
+        message: error.response.data.message || "Có lỗi xảy ra khi gửi OTP",
+      };
     } else if (error.request) {
-      return { success: false, message: 'Không có phản hồi từ server. Vui lòng kiểm tra kết nối.' };
+      return {
+        success: false,
+        message: "Không có phản hồi từ server. Vui lòng kiểm tra kết nối.",
+      };
     } else {
       return { success: false, message: `Lỗi: ${error.message}` };
     }
   }
 };
 
-export const resetPassword = async (email: string, newPassword: string, confirmPassword: string) => {
+export const resetPassword = async (
+  email: string,
+  newPassword: string,
+  confirmPassword: string
+) => {
   try {
-    const response = await axios.post('/reset-password', { email, newPassword, confirmPassword });
+    const response = await axiosInstance.post("/reset-password", {
+      email,
+      newPassword,
+      confirmPassword,
+    });
 
     if (response.status === 200) {
-      return { success: true, message: 'Đặt lại mật khẩu thành công' };
+      return { success: true, message: "Đặt lại mật khẩu thành công" };
     } else {
-      throw new Error(response.data.message || 'Không thể reset mật khẩu');
+      throw new Error(response.data.message || "Không thể reset mật khẩu");
     }
   } catch (error: any) {
-    console.error('Lỗi reset mật khẩu:', error);
+    console.error("Lỗi reset mật khẩu:", error);
 
     if (error.response) {
-      return { success: false, message: error.response.data.message || 'Có lỗi xảy ra khi reset mật khẩu' };
+      return {
+        success: false,
+        message:
+          error.response.data.message || "Có lỗi xảy ra khi reset mật khẩu",
+      };
     } else if (error.request) {
-      return { success: false, message: 'Không có phản hồi từ server. Vui lòng kiểm tra kết nối.' };
+      return {
+        success: false,
+        message: "Không có phản hồi từ server. Vui lòng kiểm tra kết nối.",
+      };
     } else {
       return { success: false, message: `Lỗi: ${error.message}` };
     }
@@ -172,19 +227,14 @@ export const ChangeInfoUser = async (
   id: string,
   fullName: string,
   phone: string,
-  address: string,
-  token: string
+  address: string
 ) => {
   try {
-    const response = await axios.patch(
-      `/admin/users/edit/${id}`,
-      { fullName, phone, address },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await axiosInstance.patch(`/admin/users/edit/${id}`, {
+      fullName,
+      phone,
+      address,
+    });
 
     if (response.data.success) {
       return {
@@ -209,7 +259,7 @@ export const ChangeInfoUser = async (
 
 export const getUserInfo = async (id: string) => {
   try {
-    const response = await axios.get(`/admin/users/id/${id}`);
+    const response = await axiosInstance.get(`/admin/users/id/${id}`);
 
     if (response.status === 200) {
       return {
@@ -234,20 +284,14 @@ export const getUserInfo = async (id: string) => {
 export const userChangePass = async (
   id: string,
   passwordOld: string,
-  passwordNew: string,
-  token: string
+  passwordNew: string
 ) => {
   try {
-    const response = await axios.patch(
+    const response = await axiosInstance.patch(
       `/admin/users/${id}/update-password`,
       {
         passwordOld,
         passwordNew,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       }
     );
 
@@ -259,42 +303,40 @@ export const userChangePass = async (
     };
   }
 };
-export const userGetOrder = async (
-  token: string
-) => {
+
+export const userGetOrder = async (userId: string) => {
   try {
-    const response = await axios.get(
-      `/order/user/`, 
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-    console.log(response.data)
+    const response = await axiosInstance.get(`/order/user/id/${userId}`, {
+      // headers: {
+      //   Authorization: `Bearer ${token}`,
+      // },
+    });
+    // console.log(response.data);
     return {
       success: true,
-      data: response.data
+      data: response.data,
     };
   } catch (error: any) {
     return {
       success: false,
-      message: error.response?.data?.message || "Không thể lấy danh sách đơn hàng",
+      message:
+        error.response?.data?.message || "Không thể lấy danh sách đơn hàng",
     };
   }
 };
 
-export const cancelOrderApi = async (orderId: string, token: string) => {
+export const cancelOrderApi = async (
+  orderId: string,
+  reason: string,
+  userId: string
+) => {
   try {
-    const res = await axios.put(
-      `/order/status/${orderId}`, 
-      { status: "Đã hủy" },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const res = await axiosInstance.patch(`/order/status/${orderId}`, {
+      status: 5,
+      paymentStatus: 3,
+      reason,
+      userId,
+    });
     return {
       success: true,
       data: res.data,
@@ -303,6 +345,24 @@ export const cancelOrderApi = async (orderId: string, token: string) => {
     return {
       success: false,
       message: error.response?.data?.error || "Hủy đơn hàng thất bại",
+    };
+  }
+};
+
+export const completeOrderApi = async (orderId: string, userId: string) => {
+  try {
+    const res = await axiosInstance.patch(`/order/status/${orderId}`, {
+      status: 4,
+      userId,
+    });
+    return {
+      success: true,
+      data: res.data,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.response?.data?.error || "Hoàn thành đơn hàng thất bại",
     };
   }
 };
