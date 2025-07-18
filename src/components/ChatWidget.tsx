@@ -8,7 +8,7 @@ import { FaImage } from "react-icons/fa";
 import axios from "axios";
 
 type Sender = "user" | "admin";
-type Message = { sender: Sender; text: string  , image: string};
+type Message = { sender: Sender; text: string };
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -95,7 +95,6 @@ export default function ChatWidget() {
         const converted: Message[] = data.messages.map((msg: any) => ({
           sender: msg.senderId === userId ? "user" : "admin",
           text: msg.content,
-          image : msg.image
         }));
         setMessages(converted);
         setConversationId(data._id);
@@ -118,7 +117,7 @@ export default function ChatWidget() {
       if (msg.senderId !== userId) {
         setMessages((prev) => [
           ...prev,
-          { sender: "admin", text: msg.content  , image: msg.image},
+          { sender: "admin", text: msg.content },
         ]);
       }
     });
@@ -130,7 +129,7 @@ export default function ChatWidget() {
     if (!input.trim() || !conversationId) return;
 
     const content = input.trim();
-    setMessages((prev) => [...prev, { sender: "user", text: content ,}]);
+    setMessages((prev) => [...prev, { sender: "user", text: content }]);
     setInput("");
 
     try {
