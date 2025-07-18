@@ -209,49 +209,48 @@ export default function ProductCategory() {
   }, [expandedParam, parentCategories]);
 
   const filteredProducts: IProduct[] = useMemo(() => {
-    if (!activeProducts) return [];
-    console.log('Search query:', decodeURIComponent(searchQuery));
-    console.log('Active products:', activeProducts.map(p => ({ name: p.name, slug: p.slug })));
-    let filtered = activeProducts.filter(product => {
-      const matchCat = selectedCategoryId === 'all' || product.categoryId === selectedCategoryId;
-      const matchBrand = selectedBrandId === 'all' || product.brandId === selectedBrandId;
-      const matchSize = selectedSizes.length === 0 || (product.variation?.some(v => v.attributes?.some(attr => attr.attributeName === 'Kích Thước' && attr.values.some(val => selectedSizes.includes(val)))) ?? false);
-      const price = product.variation?.[0]?.salePrice > 0 ? product.variation[0].salePrice : product.variation?.[0]?.regularPrice || 0;
-      let matchPrice = true;
-      if (priceRange !== 'all') {
-        const [min, max] = priceRange.split('-').map(Number);
-        matchPrice = max ? price >= min && price <= max : price >= min;
-      }
-      const matchColor = selectedColors.length === 0 || (product.variation?.some(v => v.attributes?.some(attr => attr.attributeName === 'Màu sắc' && attr.values.some(val => selectedColors.includes(val)))) ?? false);
-      const matchRating = selectedRating === 'all' || (product.averageRating && (selectedRating === '5' ? product.averageRating === 5 : product.averageRating >= Number(selectedRating)));
-      const normalizedQuery = removeDiacritics(decodeURIComponent(searchQuery).toLowerCase());
-      const matchSearch = searchQuery
-        ? removeDiacritics(product.name.toLowerCase()).includes(normalizedQuery) ||
+  if (!activeProducts) return [];
+
+  let filtered = activeProducts.filter(product => {
+    const matchCat = selectedCategoryId === 'all' || product.categoryId === selectedCategoryId;
+    const matchBrand = selectedBrandId === 'all' || product.brandId === selectedBrandId;
+    const matchSize = selectedSizes.length === 0 || (product.variation?.some(v => v.attributes?.some(attr => attr.attributeName === 'Kích Thước' && attr.values.some(val => selectedSizes.includes(val)))) ?? false);
+    const price = product.variation?.[0]?.salePrice > 0 ? product.variation[0].salePrice : product.variation?.[0]?.regularPrice || 0;
+    let matchPrice = true;
+    if (priceRange !== 'all') {
+      const [min, max] = priceRange.split('-').map(Number);
+      matchPrice = max ? price >= min && price <= max : price >= min;
+    }
+    const matchColor = selectedColors.length === 0 || (product.variation?.some(v => v.attributes?.some(attr => attr.attributeName === 'Màu sắc' && attr.values.some(val => selectedColors.includes(val)))) ?? false);
+    const matchRating = selectedRating === 'all' || (product.averageRating && (selectedRating === '5' ? product.averageRating === 5 : product.averageRating >= Number(selectedRating)));
+    const normalizedQuery = removeDiacritics(decodeURIComponent(searchQuery).toLowerCase());
+    const matchSearch = searchQuery
+      ? removeDiacritics(product.name.toLowerCase()).includes(normalizedQuery) ||
         removeDiacritics(product.slug.toLowerCase()).includes(normalizedQuery) ||
         (product.description && removeDiacritics(product.description.toLowerCase()).includes(normalizedQuery))
-        : true;
-      console.log(`Product: ${product.name}, Slug: ${product.slug}, Matches search: ${matchSearch}`);
-      return matchCat && matchBrand && matchSize && matchPrice && matchColor && matchRating && matchSearch;
-    });
+      : true;
+    return matchCat && matchBrand && matchSize && matchPrice && matchColor && matchRating && matchSearch;
+  });
 
-    if (sortBy === 'price-asc') {
-      filtered.sort((a, b) => {
-        const priceA = a.variation?.[0]?.salePrice > 0 ? a.variation[0].salePrice : a.variation?.[0]?.regularPrice || 0;
-        const priceB = b.variation?.[0]?.salePrice > 0 ? b.variation[0].salePrice : b.variation?.[0]?.regularPrice || 0;
-        return priceA - priceB;
-      });
-    } else if (sortBy === 'price-desc') {
-      filtered.sort((a, b) => {
-        const priceA = a.variation?.[0]?.salePrice > 0 ? a.variation[0].salePrice : a.variation?.[0]?.regularPrice || 0;
-        const priceB = b.variation?.[0]?.salePrice > 0 ? b.variation[0].salePrice : b.variation?.[0]?.regularPrice || 0;
-        return priceB - priceA;
-      });
-    } else if (sortBy === 'newest') {
-      filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-    console.log('Filtered products:', filtered.map(p => p.name));
-    return filtered;
-  }, [activeProducts, selectedCategoryId, selectedBrandId, sortBy, selectedSizes, priceRange, selectedColors, selectedRating, searchQuery]);
+  if (sortBy === 'bestseller') {
+    filtered.sort((a, b) => (b.selled || 0) - (a.selled || 0));
+  } else if (sortBy === 'price-asc') {
+    filtered.sort((a, b) => {
+      const priceA = a.variation?.[0]?.salePrice > 0 ? a.variation[0].salePrice : a.variation?.[0]?.regularPrice || 0;
+      const priceB = b.variation?.[0]?.salePrice > 0 ? b.variation[0].salePrice : b.variation?.[0]?.regularPrice || 0;
+      return priceA - priceB;
+    });
+  } else if (sortBy === 'price-desc') {
+    filtered.sort((a, b) => {
+      const priceA = a.variation?.[0]?.salePrice > 0 ? a.variation[0].salePrice : a.variation?.[0]?.regularPrice || 0;
+      const priceB = b.variation?.[0]?.salePrice > 0 ? b.variation[0].salePrice : b.variation?.[0]?.regularPrice || 0;
+      return priceB - priceA;
+    });
+  } else if (sortBy === 'newest') {
+    filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  return filtered;
+}, [activeProducts, selectedCategoryId, selectedBrandId, sortBy, selectedSizes, priceRange, selectedColors, selectedRating, searchQuery]);
 
   const paginatedProducts: IProduct[] = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
@@ -259,19 +258,20 @@ export default function ProductCategory() {
     return filteredProducts.slice(startIndex, endIndex);
   }, [filteredProducts, currentPage]);
 
-  const featuredProducts: any[] = useMemo(() => {
-    if (!newProductsData?.docs) return [];
-    return newProductsData.docs
-      .filter(product => product.isActive)
-      .slice(0, 3)
-      .map(product => ({
-        id: product._id,
-        slug: product.slug,
-        title: product.name,
-        image: product.image[0],
-        price: product.variation?.[0]?.salePrice > 0 ? product.variation[0].salePrice : product.variation?.[0]?.regularPrice || 0,
-      }));
-  }, [newProductsData]);
+const featuredProducts: any[] = useMemo(() => {
+  if (!newProductsData?.docs) return [];
+  return newProductsData.docs
+    .filter(product => product.isActive)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3) 
+    .map(product => ({
+      id: product._id,
+      slug: product.slug,
+      title: product.name,
+      image: product.image[0],
+      price: product.variation?.[0]?.salePrice > 0 ? product.variation[0].salePrice : product.variation?.[0]?.regularPrice || 0,
+    }));
+}, [newProductsData]);
 
   const getSelectedBrandName = (): string => selectedBrandId === 'all' ? 'Tất cả' : activeBrands?.find(b => b._id === selectedBrandId)?.name || 'Tất cả';
 
