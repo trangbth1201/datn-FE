@@ -1,5 +1,6 @@
 // services/order.service.js
 import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 
 const API_URL = "http://localhost:8080/api";
 
@@ -111,13 +112,7 @@ export const orderService = {
   },
   getPaymentStatus: async (orderId: string) => {
     try {
-      const response = await axios.get(`${API_URL}/payment/status/${orderId}`, {
-        headers: {
-          "Content-Type": "application/json",
-          // Thêm Authorization header nếu có authentication
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const response = await axiosInstance.get(`/payment/status/${orderId}`);
       return response.data;
     } catch (error) {
       console.error("Lỗi khi lấy trạng thái đơn hàng:", error);
