@@ -307,7 +307,7 @@ export const userGetOrder = async (userId: string) => {
       //   Authorization: `Bearer ${token}`,
       // },
     });
-    console.log(response.data);
+    // console.log(response.data);
     return {
       success: true,
       data: response.data,

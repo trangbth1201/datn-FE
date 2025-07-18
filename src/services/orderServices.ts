@@ -24,7 +24,7 @@ export const orderService = {
   // Lấy thông tin đơn hàng theo ID
   getOrderById: async (orderId: string) => {
     try {
-      const response = await axios.get(`${API_URL}/order/${orderId}`);
+      const response = await axios.get(`${API_URL}/order/id/${orderId}`);
       return response.data;
     } catch (error) {
       console.error("Lỗi khi tải đơn hàng:", error);
@@ -55,10 +55,11 @@ export const orderService = {
   },
 
   // Cập nhật trạng thái đơn hàng
-  updateOrderStatus: async (orderId: string, status: number) => {
+  updateOrderStatus: async (orderId: string, status: number, userId: string) => {
     try {
-      const response = await axios.patch(`${API_URL}/order/${orderId}/status`, {
+      const response = await axios.patch(`${API_URL}/order/status/${orderId}`, {
         status,
+        userId,
       });
       return response.data;
     } catch (error) {
@@ -71,7 +72,7 @@ export const orderService = {
   updatePaymentStatus: async (orderId: string, paymentStatus: number) => {
     try {
       const response = await axios.patch(
-        `${API_URL}/order/${orderId}/payment-status`,
+        `${API_URL}/order/payment-status/${orderId}`,
         {
           paymentStatus,
         }
@@ -99,7 +100,7 @@ export const orderService = {
     try {
       const response = await axios.get(`${API_URL}/payment/status/${orderId}`, {
         headers: {
-          "Content-Type": "application/json", 
+          "Content-Type": "application/json",
           // Thêm Authorization header nếu có authentication
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
