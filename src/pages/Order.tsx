@@ -1,21 +1,19 @@
 import {
   Button as AntButton,
   Input as AntInput,
-  Select as AntSelect,
+  Checkbox,
   Form,
-  Input,
+  InputNumber,
   Modal,
-  Radio,
   Select,
-  Table,
+  Tabs,
   Tag,
+  Popconfirm
 } from "antd";
 import message from "antd/es/message";
 import {
   CheckCircle,
   Clock,
-  LayoutGrid,
-  List,
   PackageCheck,
   RefreshCcw,
   Truck,
@@ -30,9 +28,11 @@ import {
   userGetOrder,
 } from "../services/authService";
 import { orderService } from "../services/orderServices";
+import { returnRequestService } from "../services/returnRequest.service";
 import socket from "../services/socket";
 import { getStatusColor } from "../utils/getStatusColor";
 import { statusLabels } from "../utils/statusLabels";
+import axios from "axios";
 
 const { Option } = Select;
 
@@ -60,22 +60,33 @@ const getStatusIcon = (status: number) => {
 const cancelReasons = [
   "Thay đổi ý định",
   "Thay đổi địa chỉ giao hàng",
-  "Muốn thêm mã giảm giá",
+  "Muốn thêm mã giảm giá",
   "Thời gian giao hàng quá lâu",
   "Khác",
 ];
 
+const returnReasons = [
+  "Sản phẩm lỗi",
+  "Sản phẩm không đúng mô tả",
+  "Thay đổi ý định",
+  "Khác",
+];
+
 const Order = () => {
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState<IOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Tất cả");
-  const [viewType, setViewType] = useState("table");
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState("");
-  const [form] = Form.useForm();
+  const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
+  const [isReturnModalVisible, setIsReturnModalVisible] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<IOrder | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<
+    { productId: string; quantity: number; price: number }[]
+  >([]);
+  const [cancelForm] = Form.useForm();
+  const [returnForm] = Form.useForm();
   const navigate = useNavigate();
   const userId = localStorage.getItem("userId");
+
   const fetchOrders = async () => {
     setLoading(true);
     const res = await userGetOrder(userId || "");
@@ -97,38 +108,131 @@ const Order = () => {
       socket.off("order-status-changed");
     };
   }, [userId]);
-  const showCancelModal = (id: string) => {
-    setSelectedOrderId(id);
-    setIsModalVisible(true);
+
+  const showCancelModal = (order: IOrder) => {
+    setSelectedOrder(order);
+    setIsCancelModalVisible(true);
+  };
+
+  const showReturnModal = (order: IOrder) => {
+    setSelectedOrder(order);
+    setSelectedProducts([]);
+    setIsReturnModalVisible(true);
+    returnForm.setFieldsValue({
+      customerInfo: { name: "", phone: "", email: "" },
+    });
   };
 
   const handleCancelOrder = async (values: {
     reason: string;
     customReason?: string;
   }) => {
+    if (!selectedOrder) return;
+
     const finalReason =
       values.reason === "Khác" && values.customReason
         ? values.customReason
         : values.reason;
-    const userId = localStorage.getItem("userId");
-    const res = await cancelOrderApi(
-      selectedOrderId,
-      finalReason,
-      userId || ""
-    );
-    if (res.success) {
-      message.success("Đã hủy đơn hàng");
-      fetchOrders();
-    } else {
-      message.error("Hủy thất bại");
+
+    try {
+      if (selectedOrder.paymentMethod === "VNPAY" && selectedOrder.paymentStatus === 1) {
+        const refundResponse = await axios.post('http://localhost:8080/api/wallet/cancel-refund',
+          {
+            orderId: selectedOrder._id,
+            type: "refund",
+            amount: selectedOrder.totalAmount,
+            status: 1,
+            description: `Trả lại tiền đơn hàng đã hủy ${selectedOrder.orderCode}: ${finalReason}`,
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        const refundData = await refundResponse.data;
+
+        if (!refundData.success) {
+          message.error("Refund request failed");
+          return;
+        }
+
+        // Update payment status to 2 (failed/canceled)
+        // await orderService.updateOrderStatus(selectedOrder._id, 5, selectedOrder.userId);
+        // await orderService.updatePaymentStatus(selectedOrder._id, 2);
+      }
+
+      // Proceed with canceling the order
+      const res = await cancelOrderApi(selectedOrder._id, finalReason, userId || "");
+      if (res.success) {
+        message.success("Đã hủy đơn hàng");
+        fetchOrders();
+      } else {
+        message.error("Hủy đơn hàng thất bại");
+      }
+    } catch (error: any) {
+      message.error(error.message || "Hủy đơn hàng thất bại");
     }
-    setIsModalVisible(false);
-    form.resetFields();
+
+    setIsCancelModalVisible(false);
+    cancelForm.resetFields();
+    setSelectedOrder(null);
   };
 
-  const handleModalCancel = () => {
-    setIsModalVisible(false);
-    form.resetFields();
+  const handleReturnOrder = async (values: {
+    customerInfo: { name: string; phone: string; email?: string };
+    reason: string;
+    customReason?: string;
+    notes?: string;
+  }) => {
+    if (!selectedOrder) return;
+    const finalReason =
+      values.reason === "Khác" && values.customReason
+        ? values.customReason
+        : values.reason;
+    const refundAmount = selectedProducts.reduce(
+      (sum, product) => sum + product.quantity * product.price,
+      0
+    );
+
+    if (selectedProducts.length === 0) {
+      message.error("Vui lòng chọn ít nhất một sản phẩm để trả hàng");
+      return;
+    }
+
+    try {
+      await returnRequestService.createReturnRequest({
+        orderId: selectedOrder._id,
+        reason: finalReason,
+        products: selectedProducts,
+        refundAmount,
+        notes: values.notes,
+      });
+      await orderService.updateOrderStatus(selectedOrder._id, 6, selectedOrder.userId);
+      message.success(`Yêu cầu trả hàng đã được gửi: ${finalReason}`);
+      fetchOrders();
+    } catch (error: any) {
+      message.error(error.message || "Gửi yêu cầu trả hàng thất bại");
+    }
+    setIsReturnModalVisible(false);
+    returnForm.resetFields();
+    setSelectedOrder(null);
+    setSelectedProducts([]);
+  };
+
+  const handleCancelModal = () => {
+    setIsCancelModalVisible(false);
+    cancelForm.resetFields();
+    setSelectedOrder(null);
+  };
+
+  const handleReturnModalCancel = () => {
+    setIsReturnModalVisible(false);
+    returnForm.resetFields();
+    setSelectedOrder(null);
+    setSelectedProducts([]);
   };
 
   const getPaymentUrl = async (id: string) => {
@@ -137,29 +241,60 @@ const Order = () => {
     message.success("Đang chuyển đến cổng thanh toán");
   };
 
-  const completeOrder = async (id: string) => {
-    const confirmed = window.confirm("Bạn có chắc muốn hoàn thành đơn hàng?");
-    if (!confirmed) return;
-
-    const res = await completeOrderApi(id, userId || "");
-    if (res.success) {
-      message.success("Đã hoàn thành đơn hàng");
-      fetchOrders();
-    } else {
-      message.error("Hoàn thành thất bại");
-    }
+  const completeOrder = (id: string) => {
+    Modal.confirm({
+      title: "Xác nhận hoàn thành đơn hàng",
+      content: "Bạn có chắc muốn hoàn thành đơn hàng này?",
+      okText: "Hoàn thành",
+      cancelText: "Hủy",
+      okButtonProps: { type: "primary", danger: false },
+      onOk: async () => {
+        const res = await completeOrderApi(id, userId || "");
+        if (res.success) {
+          message.success("Đã hoàn thành đơn hàng");
+          fetchOrders();
+        } else {
+          message.error("Hoàn thành thất bại");
+        }
+      },
+    });
   };
 
-  const filteredOrders = orders.filter((order: IOrder) => {
-    const matchSearch =
-      order.orderCode.toLowerCase().includes(search.toLowerCase()) ||
-      order.items.some((item) =>
-        item.productName.toLowerCase().includes(search.toLowerCase())
-      );
-    const matchStatus =
-      statusFilter === "Tất cả" || order.status === parseInt(statusFilter);
-    return matchSearch && matchStatus;
-  });
+  const handleProductSelection = (
+    productId: string,
+    checked: boolean,
+    quantity: number,
+    price: number
+  ) => {
+    setSelectedProducts((prev) => {
+      if (checked) {
+        return [
+          ...prev.filter((item) => item.productId !== productId),
+          { productId, quantity, price },
+        ];
+      }
+      return prev.filter((item) => item.productId !== productId);
+    });
+  };
+
+  const handleQuantityChange = (productId: string, quantity: number | null) => {
+    if (quantity === null || quantity < 1) return;
+    setSelectedProducts((prev) =>
+      prev.map((item) =>
+        item.productId === productId ? { ...item, quantity } : item
+      )
+    );
+  };
+
+  const filteredOrders = (status?: number) =>
+    orders.filter((order: IOrder) => {
+      const matchSearch =
+        order.orderCode.toLowerCase().includes(search.toLowerCase()) ||
+        order.items.some((item) =>
+          item.productName.toLowerCase().includes(search.toLowerCase())
+        );
+      return matchSearch && (status === undefined || order.status === status);
+    });
 
   const totalAmount = orders.reduce((sum, o: IOrder) => sum + o.totalAmount, 0);
   const totalDiscount = orders.reduce(
@@ -168,103 +303,139 @@ const Order = () => {
   );
   const totalPending = orders.filter((o: IOrder) => o.status === 0).length;
 
-  const columns = [
-    {
-      title: "Mã đơn hàng",
-      dataIndex: "orderCode",
-      render: (text: string) => (
-        <span className="font-semibold text-gray-800">{text}</span>
-      ),
-    },
-    {
-      title: "Ngày đặt",
-      dataIndex: "createdAt",
-      render: (text: string) =>
-        new Date(text).toLocaleDateString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        }),
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      render: (status: number) => (
-        <div className="flex items-center gap-2">
-          {getStatusIcon(status)}
-          <Tag color={getStatusColor(status)}>{statusLabels[status]}</Tag>
+  const renderCardView = (orders: IOrder[]) => (
+    <div>
+      {orders.length === 0 ? (
+        <div className="text-center text-gray-500 py-6">
+          Không có đơn hàng nào
         </div>
-      ),
-    },
-    {
-      title: "Sản phẩm",
-      dataIndex: "items",
-      render: (items: OrderItem[]) => (
-        <span className="text-gray-600">{items.length} sản phẩm</span>
-      ),
-    },
-    {
-      title: "Tổng tiền",
-      dataIndex: "totalAmount",
-      render: (amount: number) => (
-        <span className="text-red-600 font-semibold">
-          {amount.toLocaleString("vi-VN")} ₫
-        </span>
-      ),
-    },
-    {
-      title: "Thao tác",
-      render: (_: any, record: IOrder) => (
-        <div className="flex gap-2">
-          <AntButton
-            type="primary"
-            size="small"
-            onClick={() => navigate(`/order/${record._id}`)}
-            className="bg-blue-500 hover:bg-blue-600"
-          >
-            Xem
-          </AntButton>
-          {(record.status === 0 || record.status === 1) && (
-            <AntButton
-              danger
-              size="small"
-              onClick={() => showCancelModal(record._id)}
-              className="bg-red-500 hover:bg-red-600"
+      ) : (
+        <div className="grid grid-cols-1 gap-4">
+          {orders.map((order: IOrder) => (
+            <div
+              key={order._id}
+              className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow border border-gray-200"
             >
-              Hủy
-            </AntButton>
-          )}
-          {record.status === 3 && (
-            <AntButton
-              type="primary"
-              size="small"
-              onClick={() => completeOrder(record._id)}
-            >
-              Hoàn thành
-            </AntButton>
-          )}
-          {record.paymentStatus === 0 && record.paymentMethod === "VNPAY" && (
-            <AntButton
-              type="primary"
-              size="small"
-              onClick={() => getPaymentUrl(record._id)}
-            >
-              Thanh toán
-            </AntButton>
-          )}
+              <div className="flex justify-between items-center mb-2" onClick={() => navigate(`/order/${order._id}`)}>
+                <div className="flex items-center gap-4">
+                  {order.items[0] && (
+                    <>
+                      <img
+                        src={order.items[0].image || "/placeholder.png"}
+                        alt={order.items[0].productName}
+                        className="w-[100px] h-[100px] object-cover rounded-md"
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-roboto text-gray-800 text-lg">
+                          {order.items[0].productName}
+                        </span>
+                        <span className="font-roboto text-gray-800 text-base">
+                          {order.items[0].priceAtOrder?.toLocaleString("vi-VN")} ₫
+                        </span>
+                        <span className="font-roboto text-gray-600 text-sm">
+                          x{order.items[0].quantity}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {getStatusIcon(order.status)}
+                  <Tag color={getStatusColor(order.status)}>
+                    {statusLabels[order.status]}
+                  </Tag>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 mb-2">
+                {order.items.length} sản phẩm
+              </p>
+              <p className="text-sm text-gray-500 mb-2">
+                Ngày đặt: {new Date(order.createdAt).toLocaleDateString("vi-VN")}
+              </p>
+              <p className="text-sm text-gray-500 mb-2">
+                Mã đơn hàng: {(order.orderCode || "").toUpperCase()}
+              </p>
+              <br />
+              <hr />
+              <div className="mt-6">
+                <span className="text-sm text-gray-500 mb-2">Tổng cộng:</span>
+                <p className="text-green-600 font-semibold mb-3 text-2xl">
+                  {order.totalAmount?.toLocaleString("vi-VN")} ₫
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <AntButton
+                  type="primary"
+                  size="large"
+                  onClick={() => navigate(`/order/${order._id}`)}
+                  className="bg-blue-500 hover:bg-blue-600"
+                >
+                  Xem
+                </AntButton>
+                {(order.status === 0 || order.status === 1) && (
+                  <AntButton
+                    danger
+                    size="large"
+                    onClick={() => showCancelModal(order)}
+                    className="bg-red-500 hover:bg-red-600"
+                  >
+                    Hủy
+                  </AntButton>
+                )}
+                {order.status === 3 && (
+                  <AntButton
+                    type="primary"
+                    size="large"
+                    onClick={() => showReturnModal(order)}
+                    className="bg-purple-500 hover:bg-purple-600"
+                  >
+                    Trả hàng & Hoàn tiền
+                  </AntButton>
+                )}
+                {order.status === 3 && (
+                  <Popconfirm
+                    title="Xác nhận hoàn thành đơn hàng?"
+                    onConfirm={() => completeOrder(order._id)}
+                    okText="Hoàn thành"
+                    cancelText="Hủy"
+                    placement="topRight"
+                  >
+                    <AntButton
+                      className="bg-green-600 text-white"
+                      size="large"
+                    >
+                      Hoàn thành
+                    </AntButton>
+                  </Popconfirm>
+                )}
+                {order.status === 0 && order.paymentMethod === "VNPAY" && (
+                  <AntButton
+                    type="primary"
+                    size="large"
+                    onClick={() => getPaymentUrl(order._id)}
+                  >
+                    Thanh toán
+                  </AntButton>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
-      ),
-    },
-  ];
+      )}
+    </div>
+  );
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center mb-6">
-        <Input
+      <div className="mb-6">
+        <AntInput
           placeholder="Tìm mã đơn hàng, sản phẩm..."
           value={search}
+          style={{ width: "230px" }}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full sm:w-64 rounded-md"
+          className="w-full rounded-md"
           prefix={
             <svg
               className="w-4 h-4 text-gray-400"
@@ -282,44 +453,11 @@ const Order = () => {
             </svg>
           }
         />
-        <Select
-          value={statusFilter}
-          onChange={setStatusFilter}
-          className="w-full sm:w-48 rounded-md"
-          dropdownClassName="rounded-md"
-        >
-          <Option value="Tất cả">Tất cả</Option>
-          {Object.entries(statusLabels).map(([key, value]) => (
-            <Option key={key} value={key}>
-              {value}
-            </Option>
-          ))}
-        </Select>
-        <Radio.Group
-          value={viewType}
-          onChange={(e) => setViewType(e.target.value)}
-          className="flex gap-2"
-        >
-          <Radio.Button
-            value="card"
-            className="flex justify-center items-center rounded-md"
-          >
-            <LayoutGrid size={16} />
-          </Radio.Button>
-          <Radio.Button
-            value="table"
-            className="flex justify-center items-center rounded-md"
-          >
-            <List size={16} />
-          </Radio.Button>
-        </Radio.Group>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-gray-50 p-4 rounded-lg text-center shadow-sm">
-          <div className="text-2xl font-bold text-gray-800">
-            {orders.length}
-          </div>
+          <div className="text-2xl font-bold text-gray-800">{orders.length}</div>
           <div className="text-sm text-gray-500">Tổng đơn hàng</div>
         </div>
         <div className="bg-gray-50 p-4 rounded-lg text-center shadow-sm">
@@ -340,91 +478,44 @@ const Order = () => {
         </div>
       </div>
 
-      {viewType === "table" ? (
-        <Table
-          rowKey="_id"
-          columns={columns}
-          dataSource={filteredOrders}
-          loading={loading}
-          pagination={{
-            pageSize: 10,
-            position: ["bottomCenter"],
-            showSizeChanger: true,
-          }}
-          bordered
-          className="rounded-lg overflow-hidden"
-          scroll={{ x: "max-content" }}
-        />
-      ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredOrders.map((order: IOrder) => (
-            <div
-              key={order._id}
-              className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-semibold text-gray-800">
-                  {order.orderCode}
-                </span>
-                <Tag color={getStatusColor(order.status)}>
-                  {statusLabels[order.status]}
-                </Tag>
-              </div>
-              <p className="text-sm text-gray-500 mb-2">
-                Ngày đặt:{" "}
-                {new Date(order.createdAt).toLocaleDateString("vi-VN")}
-              </p>
-              <p className="text-sm text-gray-500 mb-2">
-                {order.items.length} sản phẩm
-              </p>
-              <p className="text-red-600 font-semibold mb-3">
-                {order.totalAmount.toLocaleString("vi-VN")} ₫
-              </p>
-              <div className="flex gap-2">
-                <AntButton
-                  type="primary"
-                  size="small"
-                  onClick={() => navigate(`/order/${order._id}`)}
-                  className="bg-blue-500 hover:bg-blue-600"
-                >
-                  Xem
-                </AntButton>
-                {(order.status === 0 || order.status === 1) && (
-                  <AntButton
-                    danger
-                    size="small"
-                    onClick={() => showCancelModal(order._id)}
-                    className="bg-red-500 hover:bg-red-600"
-                  >
-                    Hủy
-                  </AntButton>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <Tabs
+        defaultActiveKey="all"
+        className="rounded-lg"
+        items={[
+          {
+            key: "all",
+            label: "Tất cả",
+            children: renderCardView(filteredOrders()),
+          },
+          ...Object.entries(statusLabels).map(([key, value]) => ({
+            key,
+            label: value,
+            children: renderCardView(filteredOrders(parseInt(key))),
+          })),
+        ]}
+      />
 
+      {/* Cancel Order Modal */}
       <Modal
         title="Hủy đơn hàng"
-        visible={isModalVisible}
-        onCancel={handleModalCancel}
+        open={isCancelModalVisible}
+        onCancel={handleCancelModal}
         footer={null}
         className="rounded-lg"
       >
-        <Form form={form} onFinish={handleCancelOrder} layout="vertical">
+        <Form form={cancelForm} onFinish={handleCancelOrder} layout="vertical">
           <Form.Item
             name="reason"
             label="Lý do hủy"
             rules={[{ required: true, message: "Vui lòng chọn lý do hủy" }]}
           >
-            <AntSelect placeholder="Chọn lý do">
+            <Select placeholder="Chọn lý do">
               {cancelReasons.map((reason) => (
-                <AntSelect.Option key={reason} value={reason}>
+                <Select.Option key={reason} value={reason}>
                   {reason}
-                </AntSelect.Option>
+                </Select.Option>
               ))}
-            </AntSelect>
+            </Select>
           </Form.Item>
           <Form.Item
             noStyle
@@ -451,13 +542,142 @@ const Order = () => {
           </Form.Item>
           <Form.Item>
             <div className="flex gap-2 justify-end">
-              <AntButton onClick={handleModalCancel}>Hủy bỏ</AntButton>
+              <AntButton onClick={handleCancelModal}>Hủy bỏ</AntButton>
               <AntButton
                 type="primary"
                 htmlType="submit"
                 className="bg-red-500 hover:bg-red-600"
               >
                 Xác nhận hủy
+              </AntButton>
+            </div>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Return and Refund Modal */}
+      <Modal
+        title="Trả hàng & Hoàn tiền"
+        open={isReturnModalVisible}
+        onCancel={handleReturnModalCancel}
+        footer={null}
+        className="rounded-lg"
+        width={800}
+      >
+        <Form form={returnForm} onFinish={handleReturnOrder} layout="vertical">
+          <h3 className="text-lg font-semibold mb-4">Danh sách sản phẩm</h3>
+          <div className="mb-4">
+            {selectedOrder?.items.map((item: OrderItem) => (
+              <div
+                key={item.productId}
+                className="flex items-center justify-between p-2 border-b"
+              >
+                <div className="flex items-center gap-4">
+                  <Checkbox
+                    checked={selectedProducts.some((p) => p.productId === item.productId)}
+                    onChange={(e) =>
+                      handleProductSelection(
+                        item.productId,
+                        e.target.checked,
+                        item.quantity,
+                        item.priceAtOrder
+                      )
+                    }
+                  />
+                  <img
+                    src={item.image || "/placeholder.png"}
+                    alt={item.productName}
+                    className="w-12 h-12 object-cover rounded-md"
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-medium">{item.productName}</span>
+                    <span className="text-sm text-gray-500">
+                      {item.priceAtOrder?.toLocaleString("vi-VN")} ₫ x {item.quantity}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <InputNumber
+                    min={1}
+                    max={item.quantity}
+                    value={
+                      selectedProducts.find((p) => p.productId === item.productId)?.quantity || 1
+                    }
+                    onChange={(value) =>
+                      handleQuantityChange(item.productId, value as number)
+                    }
+                    disabled={!selectedProducts.some((p) => p.productId === item.productId)}
+                    className="w-20"
+                  />
+                  <span className="font-semibold">
+                    {(
+                      (selectedProducts.find((p) => p.productId === item.productId)?.quantity || 0) *
+                      item.priceAtOrder
+                    )?.toLocaleString("vi-VN")} ₫
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Form.Item label="Tổng tiền hoàn (VNĐ)" shouldUpdate>
+            {() => (
+              <span className="text-red-600 font-semibold">
+                {selectedProducts
+                  .reduce((sum, p) => sum + (p.quantity * p.price), 0)
+                  .toLocaleString("vi-VN")} ₫
+              </span>
+            )}
+          </Form.Item>
+
+          <Form.Item
+            name="reason"
+            label="Lý do trả hàng"
+            rules={[{ required: true, message: "Vui lòng chọn lý do trả hàng" }]}
+          >
+            <Select placeholder="Chọn lý do">
+              {returnReasons.map((reason) => (
+                <Select.Option key={reason} value={reason}>
+                  {reason}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item
+            noStyle
+            shouldUpdate={(prevValues, currentValues) =>
+              prevValues.reason !== currentValues.reason
+            }
+          >
+            {({ getFieldValue }) =>
+              getFieldValue("reason") === "Khác" ? (
+                <Form.Item
+                  name="customReason"
+                  label="Lý do cụ thể"
+                  rules={[
+                    { required: true, message: "Vui lòng nhập lý do cụ thể" },
+                  ]}
+                >
+                  <AntInput.TextArea
+                    rows={3}
+                    placeholder="Nhập lý do trả hàng"
+                  />
+                </Form.Item>
+              ) : null
+            }
+          </Form.Item>
+          <Form.Item name="notes" label="Ghi chú bổ sung">
+            <AntInput.TextArea rows={3} placeholder="Nhập ghi chú (nếu có)" />
+          </Form.Item>
+          <Form.Item>
+            <div className="flex gap-2 justify-end">
+              <AntButton onClick={handleReturnModalCancel}>Hủy bỏ</AntButton>
+              <AntButton
+                type="primary"
+                htmlType="submit"
+                className="bg-purple-500 hover:bg-purple-600"
+                disabled={selectedProducts.length === 0}
+              >
+                Gửi yêu cầu
               </AntButton>
             </div>
           </Form.Item>
