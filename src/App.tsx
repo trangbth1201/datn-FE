@@ -52,7 +52,7 @@ const App: React.FC = () => {
           path="/order/confirmation/:orderId"
           element={<OrderConfirmationPage />}
         />
-          <Route path="/review" element={<Review />} />
+        <Route path="/review" element={<Review />} />
 
         {/* Blogs */}
         <Route path="/blogs" element={<BlogCategory />} />

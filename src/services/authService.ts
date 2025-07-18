@@ -1,4 +1,3 @@
-
 import axiosInstance from "../utils/axiosInstance";
 
 interface User {
@@ -25,7 +24,10 @@ export const login = async (
   password: string
 ): Promise<LoginResponse> => {
   try {
-    const res = await axiosInstance.post<LoginResponse>("/login", { email, password });
+    const res = await axiosInstance.post<LoginResponse>("/login", {
+      email,
+      password,
+    });
     localStorage.setItem("accessToken", res.data.accessToken);
     localStorage.setItem("userId", res.data.user._id);
     localStorage.setItem("user", JSON.stringify(res.data.user)); // Lưu user đầy đủ
@@ -40,26 +42,24 @@ export const login = async (
 
 export const refreshToken = async (): Promise<{ accessToken: string }> => {
   try {
-    const response = await axiosInstance.post<{ accessToken: string }>("/refresh-token");
+    const response = await axiosInstance.post<{ accessToken: string }>(
+      "/refresh-token"
+    );
     return response.data;
   } catch (error: any) {
     if (error.response) {
-      throw new Error(
-        error.response.data.error || "Không thể làm mới token"
-      );
+      throw new Error(error.response.data.error || "Không thể làm mới token");
     }
     throw new Error("Lỗi kết nối hoặc server gặp sự cố. Vui lòng thử lại sau.");
   }
 };
 
-export const register = async (
-  normallizedUser: {
-    fullName: string;
-    email: string;
-    password: string;
-    confirmPassword: string;
-  }
-) => {
+export const register = async (normallizedUser: {
+  fullName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}) => {
   try {
     const response = await axiosInstance.post("/register", {
       ...normallizedUser,
@@ -156,7 +156,10 @@ export const sendOtpToEmail = async (email: string) => {
 
 export const verifyOtpToEmail = async (email: string, otp: string) => {
   try {
-    const response = await axiosInstance.post("/verify-reset-otp", { email, otp });
+    const response = await axiosInstance.post("/verify-reset-otp", {
+      email,
+      otp,
+    });
     if (response.status === 200) {
       return { success: true, message: "Xác thực OTP thành công" };
     } else {
@@ -227,10 +230,11 @@ export const ChangeInfoUser = async (
   address: string
 ) => {
   try {
-    const response = await axiosInstance.patch(
-      `/admin/users/edit/${id}`,
-      { fullName, phone, address }
-    );
+    const response = await axiosInstance.patch(`/admin/users/edit/${id}`, {
+      fullName,
+      phone,
+      address,
+    });
 
     if (response.data.success) {
       return {
@@ -327,10 +331,12 @@ export const cancelOrderApi = async (
   userId: string
 ) => {
   try {
-    const res = await axiosInstance.patch(
-      `/order/status/${orderId}`,
-      { status: 5, paymentStatus: 3, reason, userId }
-    );
+    const res = await axiosInstance.patch(`/order/status/${orderId}`, {
+      status: 5,
+      paymentStatus: 3,
+      reason,
+      userId,
+    });
     return {
       success: true,
       data: res.data,
@@ -345,10 +351,10 @@ export const cancelOrderApi = async (
 
 export const completeOrderApi = async (orderId: string, userId: string) => {
   try {
-    const res = await axiosInstance.patch(
-      `/order/status/${orderId}`,
-      { status: 4, userId }
-    );
+    const res = await axiosInstance.patch(`/order/status/${orderId}`, {
+      status: 4,
+      userId,
+    });
     return {
       success: true,
       data: res.data,
