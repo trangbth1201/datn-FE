@@ -2,7 +2,7 @@ import { Button as AntButton, Spin, Tag } from "antd";
 import message from "antd/es/message";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Order } from "../interface/order.interfcace";
+import { IOrder } from "../interface/order.interfcace";
 import { userGetOrder } from "../services/authService";
 import { getStatusColor } from "../utils/getStatusColor";
 import { paymentStatusLabels } from "../utils/paymentStatusLabels";
@@ -23,7 +23,7 @@ const formatDate = (dateString: string) => {
 const OrderDetail = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
-  const [order, setOrder] = useState<Order | null>(null);
+  const [order, setOrder] = useState<IOrder | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchOrder = async () => {
@@ -31,7 +31,7 @@ const OrderDetail = () => {
     const userId = localStorage.getItem("userId");
     const res = await userGetOrder(userId || "");
     if (res.success) {
-      const selectedOrder = res.data.find((o: Order) => o._id === orderId);
+      const selectedOrder = res.data.find((o: IOrder) => o._id === orderId);
       if (selectedOrder) {
         setOrder(selectedOrder);
       } else {
@@ -90,8 +90,8 @@ const OrderDetail = () => {
                   {order.status === 4 && order.updatedAt
                     ? formatDate(order.updatedAt)
                     : order.deliveryDate
-                    ? formatDate(order.deliveryDate)
-                    : "Chưa xác định"}
+                      ? formatDate(order.deliveryDate)
+                      : "Chưa xác định"}
                 </span>
               </div>
               <div>
@@ -153,6 +153,35 @@ const OrderDetail = () => {
               >
                 Quay lại
               </AntButton>
+
+              {order.status === 4 && order.items && order.items.length > 0 && order.review === 0 && (
+                <AntButton
+                  type="primary"
+                  onClick={() => {
+                    const items = order.items;
+                    if (!items || items.length === 0) {
+                      console.error("No products found in order items:", order.items);
+                      message.error("Không có sản phẩm nào trong đơn hàng để đánh giá.");
+                      return;
+                    }
+                    navigate(
+                      `/review?orderId=${order._id}`,
+                      {
+                        state: {
+                          items: items.map((item) => ({
+                            productId: item.productId,
+                            name: item.productName,
+                          })),
+                          orderId: order._id,
+                        },
+                      }
+                    );
+                  }}
+                  className="bg-blue-500 hover:bg-blue-600 text-white ml-2"
+                >
+                  Đánh giá
+                </AntButton>
+              )}
             </div>
           </div>
         </main>

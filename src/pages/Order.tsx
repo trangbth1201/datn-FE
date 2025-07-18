@@ -76,6 +76,7 @@ const Order = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const userId = localStorage.getItem("userId");
+
   const fetchOrders = async () => {
     setLoading(true);
     const res = await userGetOrder(userId || "");
@@ -97,6 +98,7 @@ const Order = () => {
       socket.off("order-status-changed");
     };
   }, [userId]);
+
   const showCancelModal = (id: string) => {
     setSelectedOrderId(id);
     setIsModalVisible(true);
@@ -160,6 +162,8 @@ const Order = () => {
       statusFilter === "Tất cả" || order.status === parseInt(statusFilter);
     return matchSearch && matchStatus;
   });
+  console.log("Filtered Orders:", filteredOrders);
+  
 
   const totalAmount = orders.reduce((sum, o: IOrder) => sum + o.totalAmount, 0);
   const totalDiscount = orders.reduce(
@@ -224,6 +228,34 @@ const Order = () => {
           >
             Xem
           </AntButton>
+          {record.status === 4 && record.items && record.items.length > 0 && record.review === 0 &&(
+            <AntButton
+              type="primary"
+              size="small"
+              onClick={() => {
+                if (!record.items || record.items.length === 0) {
+                  console.error("No products found in order items:", record.items);
+                  message.error("Không có sản phẩm nào trong đơn hàng để đánh giá.");
+                  return;
+                }
+                navigate(
+                  `/review?orderId=${record._id}`,
+                  {
+                    state: {
+                      items: record.items.map((item) => ({
+                        productId: item.productId,
+                        name: item.productName
+                      })),
+                      orderId: record._id,
+                    },
+                  }
+                );
+              }}
+              className="bg-blue-500 hover:bg-blue-600"
+            >
+              Đánh giá
+            </AntButton>
+          )}
           {(record.status === 0 || record.status === 1) && (
             <AntButton
               danger
@@ -389,6 +421,34 @@ const Order = () => {
                 >
                   Xem
                 </AntButton>
+                {order.status === 4 && order.items && order.items.length > 0 && order.review === 0 && (
+                  <AntButton
+                    type="primary"
+                    size="small"
+                    onClick={() => {
+                      if (!order.items || order.items.length === 0) {
+                        console.error("No products found in order items:", order.items);
+                        message.error("Không có sản phẩm nào trong đơn hàng để đánh giá.");
+                        return;
+                      }
+                      navigate(
+                        `/review?orderId=${order._id}`,
+                        {
+                          state: {
+                            items: order.items.map((item) => ({
+                              productId: item.productId,
+                              name: item.productName
+                            })),
+                            orderId: order._id,
+                          },
+                        }
+                      );
+                    }}
+                    className="bg-blue-500 hover:bg-blue-600"
+                  >
+                    Đánh giá
+                  </AntButton>
+                )}
                 {(order.status === 0 || order.status === 1) && (
                   <AntButton
                     danger
