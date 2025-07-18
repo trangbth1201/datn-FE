@@ -25,6 +25,7 @@ import ShippingAddressForm from "./pages/ShippingAddressForm";
 import { UserInfo } from "./pages/Userinfo";
 import { useSocket } from "./socket/useSocket";
 import { Sidebar } from "./components/Sidebar";
+import Review from "./pages/Review";
 
 const App: React.FC = () => {
   useSocket();
@@ -51,6 +52,8 @@ const App: React.FC = () => {
           path="/order/confirmation/:orderId"
           element={<OrderConfirmationPage />}
         />
+          <Route path="/review" element={<Review />} />
+
         {/* Blogs */}
         <Route path="/blogs" element={<BlogCategory />} />
         <Route path="/blogs/detail" element={<DetailBlog />} />
