@@ -735,6 +735,7 @@ const OrderDetail = () => {
               {order.status === 4 && order.items && order.items.length > 0 && order.review === 0 && (
                 <AntButton
                   type="primary"
+                  size="large"
                   onClick={() => {
                     const items = order.items;
                     if (!items || items.length === 0) {
