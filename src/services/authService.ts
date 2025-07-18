@@ -1,3 +1,4 @@
+
 import axiosInstance from "../utils/axiosInstance";
 
 interface User {
@@ -301,7 +302,7 @@ export const userChangePass = async (
 
 export const userGetOrder = async (userId: string) => {
   try {
-    const response = await axios.get(`/order/user/id/${userId}`, {
+    const response = await axiosInstance.get(`/order/user/id/${userId}`, {
       // headers: {
       //   Authorization: `Bearer ${token}`,
       // },

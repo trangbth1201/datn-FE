@@ -1,5 +1,6 @@
 import axios, { AxiosResponse } from "axios";
 import { CancelRefundPayload, CreateWalletPayload, RefundPayload, RefundResponse, TransactionsResponse, WalletResponse } from "../interface/wallet.interface";
+import axiosInstance from "../utils/axiosInstance";
 
 // Base API URL (adjust as needed)
 const API_URL = "http://localhost:8080/api";
@@ -39,7 +40,7 @@ export const createWallet = async (
 // Service to get wallet information
 export const getWalletInfo = async (): Promise<WalletResponse> => {
   try {
-    const response: AxiosResponse<WalletResponse> = await api.get("/wallet");
+    const response: AxiosResponse<WalletResponse> = await axiosInstance.get("/wallet");
     return response.data;
   } catch (error: any) {
     throw new Error(
