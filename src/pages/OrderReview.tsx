@@ -1,10 +1,31 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { orderService } from '../services/orderServices'; // Giả định service đã được tạo
-import { voucherService } from '../services/voucher.service'; // Giả định service đã được tạo
+import { orderService } from '../services/orderServices';
+import { voucherService } from '../services/voucher.service';
 import { paymentService } from '../services/payment.service';
 import { cartService } from '../services/cart.service';
 import { OrderItem, OrderPayload, OrderSummary, ShippingInfo, Voucher } from '../interface/order.interfcace';
+
+// Voucher interface matching the backend model
+interface Voucher {
+  _id: string;
+  code: string;
+  voucherType: 'shipping' | 'product';
+  discountType: 'fixed' | 'percent';
+  discountValue: number;
+  minOrderValues: number;
+  maxDiscount?: number;
+  quantity: number;
+  used: number;
+  voucherStatus: 'active' | 'inactive' | 'expired';
+  startDate: string;
+  endDate: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+  isDeleted: boolean;
+  link?: string;
+}
 
 const OrderReview = () => {
   const navigate = useNavigate();
@@ -26,15 +47,12 @@ const OrderReview = () => {
 
   // --- DATA FETCHING & INITIALIZATION EFFECT ---
   useEffect(() => {
-
-
     // 1. Fetch available vouchers from API
     const fetchVouchers = async () => {
       setLoadingVouchers(true);
       try {
-        // Giả sử service trả về một object có chứa mảng data
         const response = await voucherService.getAllVouchers();
-        setAvailableVouchers(response.data || []);
+        setAvailableVouchers(response?.docs || []);
       } catch (err) {
         console.error('Lỗi khi tải voucher:', err);
         setError('Không thể tải danh sách voucher.');
@@ -74,7 +92,6 @@ const OrderReview = () => {
 
     } catch (err) {
       console.error("Lỗi khi xử lý dữ liệu checkout:", err);
-      // Clean up potentially corrupted data and redirect
       localStorage.removeItem('selectedCartItems');
       localStorage.removeItem('shippingInfo');
       localStorage.removeItem('paymentMethod');
@@ -88,18 +105,18 @@ const OrderReview = () => {
     const now = new Date();
     return (
       voucher.voucherStatus === 'active' &&
+      !voucher.isDeleted &&
       now >= new Date(voucher.startDate) &&
       now <= new Date(voucher.endDate) &&
       voucher.used < voucher.quantity
     );
   };
-  console.log('Fetching available orderSummary...', orderSummary)
 
   const validVouchers = useMemo(() => {
     return availableVouchers.filter(isVoucherValid);
   }, [availableVouchers]);
 
-  const applyVoucher = (codeToApply: string) => {
+  const applyVoucher = async (codeToApply: string) => {
     const code = codeToApply.toUpperCase();
     const voucher = availableVouchers.find(v => v.code === code);
 
@@ -108,19 +125,31 @@ const OrderReview = () => {
       return;
     }
     if (!isVoucherValid(voucher)) {
-      setVoucherError('Voucher đã hết hạn, hết lượt sử dụng hoặc không hoạt động.');
+      setVoucherError('Voucher đã hết hạn, hết lượt sử dụng, bị xóa hoặc không hoạt động.');
       return;
     }
     if (orderSummary && orderSummary.subtotal < voucher.minOrderValues) {
-      setVoucherError(`Voucher này yêu cầu đơn hàng tối thiểu ${voucher.minOrderValues.toLocaleString()}₫.`);
+      setVoucherError(`Voucher này yêu cầu đơn hàng tối thiểu ${voucher.minOrderValues.toLocaleString('vi-VN')}₫.`);
       return;
     }
 
-    setAppliedVoucher(voucher);
-    setVoucherCode(voucher.code);
-    setVoucherError('');
-    setShowVoucherModal(false);
-    localStorage.setItem('appliedVoucher', JSON.stringify(voucher));
+    try {
+      // Verify voucher with the server
+      const response = await voucherService.verifyVoucher(voucher._id, orderSummary!.subtotal);
+      if (!response.isValid) {
+        setVoucherError(response.message || 'Voucher không hợp lệ.');
+        return;
+      }
+
+      setAppliedVoucher(voucher);
+      setVoucherCode(voucher.code);
+      setVoucherError('');
+      setShowVoucherModal(false);
+      localStorage.setItem('appliedVoucher', JSON.stringify(voucher));
+    } catch (err) {
+      console.error('Lỗi khi xác minh voucher:', err);
+      setVoucherError('Không thể áp dụng voucher. Vui lòng thử lại.');
+    }
   };
 
   const removeVoucher = () => {
@@ -134,13 +163,12 @@ const OrderReview = () => {
   const calculatedDiscount = useMemo(() => {
     if (!appliedVoucher || !orderSummary) return 0;
 
-    const { voucherType, discountType, discountValue, maxDiscount } = appliedVoucher;
-    const targetAmount = voucherType === 'shipping' ? orderSummary.shippingFee : orderSummary.subtotal;
+    const { discountType, discountValue, maxDiscount } = appliedVoucher;
+    const targetAmount = orderSummary.subtotal; // Always apply discount to subtotal
 
-    let discount = 0;
     if (discountType === 'percent') {
-      discount = (targetAmount * discountValue) / 100;
-      return Math.min(discount, maxDiscount || discount);
+      const discount = (targetAmount * discountValue) / 100;
+      return maxDiscount ? Math.min(discount, maxDiscount) : discount;
     }
     if (discountType === 'fixed') {
       return Math.min(discountValue, targetAmount);
@@ -151,11 +179,10 @@ const OrderReview = () => {
   const finalTotal = useMemo(() => {
     if (!orderSummary) return 0;
     const total = orderSummary.subtotal + orderSummary.shippingFee - calculatedDiscount;
-    return Math.max(0, total); // Đảm bảo tổng tiền không âm
+    return Math.max(0, total);
   }, [orderSummary, calculatedDiscount]);
 
   useEffect(() => {
-    // Lưu tổng tiền cuối cùng vào localStorage để có thể dùng ở nơi khác (nếu cần)
     localStorage.setItem('totalAmount', finalTotal.toString());
   }, [finalTotal]);
 
@@ -186,6 +213,10 @@ const OrderReview = () => {
         productId: item.productId,
         variationId: item.variantId,
         productName: item.name,
+        image: item.image,
+        slug: item.slug,
+        size: item.size,
+        color: item.color,
         quantity: item.quantity,
         priceAtOrder: item.salePrice > 0 ? item.salePrice : item.regularPrice,
         totalPrice: (item.salePrice > 0 ? item.salePrice : item.regularPrice) * item.quantity
@@ -212,35 +243,28 @@ const OrderReview = () => {
     }
 
     try {
-      // Create order
       const result = await orderService.createOrder(orderData);
-    
-      // Remove cart items
+
       try {
         for (const item of orderSummary!.items) {
           await cartService.removeCart({ productId: item.productId, variantId: item.variantId });
         }
       } catch (err) {
         console.warn('Lỗi khi xóa sản phẩm khỏi giỏ hàng:', err);
-        // Không dừng flow nếu xóa giỏ hàng thất bại, chỉ ghi log
       }
-    
-      // Handle payment and navigation
+
       if (orderData.paymentMethod === 'VNPAY') {
         const paymentResult: any = await paymentService.createVnpayPaymentUrl(result.order._id);
         if (paymentResult && paymentResult.data.paymentUrl) {
-          // Xóa dữ liệu trước khi chuyển sang VNPAY
           ['selectedCartItems', 'shippingInfo', 'paymentMethod', 'appliedVoucher', 'totalAmount'].forEach(key => localStorage.removeItem(key));
           localStorage.setItem("totalAmount", finalTotal.toString());
-          // Chuyển thẳng sang trang thanh toán VNPAY
           window.location.href = paymentResult.data.paymentUrl;
-          return; // Dừng lại, không chạy tiếp navigate
+          return;
         } else {
           throw new Error('Không nhận được URL thanh toán từ máy chủ.');
         }
       }
-    
-      // Nếu là COD hoặc phương thức khác, xóa dữ liệu và chuyển sang trang xác nhận đơn hàng
+
       ['selectedCartItems', 'shippingInfo', 'paymentMethod', 'appliedVoucher', 'totalAmount'].forEach(key => localStorage.removeItem(key));
       localStorage.setItem("totalAmount", finalTotal.toString());
       navigate(`/order/confirmation/${result?.order?.orderCode}`);
@@ -271,7 +295,6 @@ const OrderReview = () => {
     );
   }
 
-  // --- JSX RENDER ---
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -321,8 +344,8 @@ const OrderReview = () => {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">{((item.salePrice > 0 ? item.salePrice : item.regularPrice) * item.quantity).toLocaleString()}₫</p>
-                      {item.salePrice > 0 && <p className="text-sm text-gray-500 line-through">{(item.regularPrice * item.quantity).toLocaleString()}₫</p>}
+                      <p className="font-medium">{((item.salePrice > 0 ? item.salePrice : item.regularPrice) * item.quantity).toLocaleString('vi-VN')}₫</p>
+                      {item.salePrice > 0 && <p className="text-sm text-gray-500 line-through">{(item.regularPrice * item.quantity).toLocaleString('vi-VN')}₫</p>}
                     </div>
                   </div>
                 ))}
@@ -356,10 +379,10 @@ const OrderReview = () => {
 
               {/* Order Summary */}
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span>Tạm tính:</span><span>{orderSummary.subtotal.toLocaleString()}₫</span></div>
-                <div className="flex justify-between"><span>Phí vận chuyển:</span><span>{orderSummary.shippingFee.toLocaleString()}₫</span></div>
-                {calculatedDiscount > 0 && <div className="flex justify-between text-green-600"><span>Giảm giá voucher:</span><span>-{calculatedDiscount.toLocaleString()}₫</span></div>}
-                <div className="flex justify-between font-semibold text-lg border-t pt-2 mt-2"><span>Tổng cộng:</span><span className="text-blue-600">{finalTotal.toLocaleString()}₫</span></div>
+                <div className="flex justify-between"><span>Tạm tính:</span><span>{orderSummary.subtotal.toLocaleString('vi-VN')}₫</span></div>
+                <div className="flex justify-between"><span>Phí vận chuyển:</span><span>{orderSummary.shippingFee.toLocaleString('vi-VN')}₫</span></div>
+                {calculatedDiscount > 0 && <div className="flex justify-between text-green-600"><span>Giảm giá voucher:</span><span>-{calculatedDiscount.toLocaleString('vi-VN')}₫</span></div>}
+                <div className="flex justify-between font-semibold text-lg border-t pt-2 mt-2"><span>Tổng cộng:</span><span className="text-blue-600">{finalTotal.toLocaleString('vi-VN')}₫</span></div>
               </div>
 
               {/* Error Display */}
@@ -394,7 +417,8 @@ const OrderReview = () => {
                       <div className="flex-1">
                         <h4 className="font-medium text-blue-600">{voucher.code}</h4>
                         <p className="text-sm text-gray-600">{voucher.description}</p>
-                        <p className="text-xs text-gray-500 mt-1">Đơn tối thiểu: {voucher.minOrderValues.toLocaleString()}₫ | HSD: {formatDate(voucher.endDate)}</p>
+                        <p className="text-xs text-gray-500 mt-1">Đơn tối thiểu: {voucher.minOrderValues.toLocaleString('vi-VN')}₫ | HSD: {formatDate(voucher.endDate)}</p>
+                        <p className="text-xs text-gray-500">Còn lại: {voucher.quantity - voucher.used} / {voucher.quantity} lượt</p>
                       </div>
                       <button onClick={() => applyVoucher(voucher.code)} disabled={!canUse} className={`px-3 py-1 text-sm rounded whitespace-nowrap ${canUse ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>
                         {canUse ? 'Dùng' : 'Không đủ ĐK'}

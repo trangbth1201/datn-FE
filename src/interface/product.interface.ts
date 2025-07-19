@@ -13,6 +13,8 @@ export interface IProduct {
   attributes: IAttribute[];
   variation: IVariation[];
   isActive: boolean;
+  isNew: boolean;
+  selled?: number;
   createdAt: string;
   updatedAt: string; 
 }

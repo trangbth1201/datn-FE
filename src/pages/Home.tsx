@@ -28,23 +28,35 @@ const Home: React.FC = () => {
     return products.filter(product => product.isActive);
   }, [products]);
 
-const filteredProducts = useMemo(() => {
-    if (!activeProducts.length) return [];
+  const filteredProducts = useMemo(() => {
+  if (!activeProducts.length) return [];
 
-    let filtered = activeProducts;
+  let filtered = activeProducts;
 
-    if (selectedId === '2') {
-      filtered = [...activeProducts].sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    } else if (selectedId === '3') {
-      filtered = activeProducts.filter(product => {
-        const variation = product.variation?.[0];
-        return variation?.salePrice > 0 && variation.salePrice < variation?.regularPrice;
-      });
-    }
-    return filtered.slice(0, 12);
-  }, [activeProducts, selectedId]);
+  if (selectedId === '1') {
+    filtered = [...activeProducts].sort((a, b) => (b.selled || 0) - (a.selled || 0));
+  } else if (selectedId === '2') {
+    filtered = [...activeProducts].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  } else if (selectedId === '3') {
+    filtered = activeProducts.filter(product => {
+      const variation = product.variation?.[0];
+      return variation?.salePrice > 0 && variation.salePrice < variation?.regularPrice;
+    });
+  }
+
+  const currentDate = new Date('2025-07-01T16:44:00+07:00');
+  const fourteenDaysAgo = new Date(currentDate);
+  fourteenDaysAgo.setDate(currentDate.getDate() - 14);
+
+  filtered = filtered.map(product => ({
+    ...product,
+    isNew: new Date(product.createdAt) >= fourteenDaysAgo,
+  }));
+
+  return filtered.slice(0, 12);
+}, [activeProducts, selectedId]);
 
   const handleCheckboxChange = (id: string) => {
     setSelectedId(prev => (prev === id ? '1' : id));
@@ -140,7 +152,7 @@ const filteredProducts = useMemo(() => {
                   <del className="old-price">{item.price}</del>
                   <span className="new-price">{item.priceSale}</span>
                 </div>
-                <img src={item.thuml} alt="@item.Name" />
+                <img src={item.thuml} alt={item.name} />
                 <a href="">
                   Mua ngay <CaretRightOutlined />
                 </a>
@@ -224,7 +236,7 @@ const filteredProducts = useMemo(() => {
                       loading="lazy"
                     />
                     <div className="absolute top-2 left-2 flex flex-col gap-1">
-                      {product.isActive && (
+                      {product.isNew && (
                         <span className="m-0 text-xs px-2 py-0.5 rounded-bl-md rounded-tr-md text-white font-bold bg-green-600">
                           MỚI
                         </span>
@@ -293,7 +305,7 @@ const filteredProducts = useMemo(() => {
         >
           SHOES
         </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-6 mb-10">
           {isLoading ? (
             <div>Đang tải...</div>
           ) : error ? (
@@ -328,7 +340,7 @@ const filteredProducts = useMemo(() => {
                       loading="lazy"
                     />
                     <div className="absolute top-2 left-2 flex flex-col gap-1">
-                      {product.isActive && (
+                      {product.isNew && (
                         <span className="m-0 text-xs px-2 py-0.5 rounded-bl-md rounded-tr-md text-white font-bold bg-green-600">
                           MỚI
                         </span>

@@ -1,5 +1,6 @@
 // services/order.service.js
 import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 
 const API_URL = "http://localhost:8080/api";
 
@@ -24,7 +25,7 @@ export const orderService = {
   // Lấy thông tin đơn hàng theo ID
   getOrderById: async (orderId: string) => {
     try {
-      const response = await axios.get(`${API_URL}/order/${orderId}`);
+      const response = await axios.get(`${API_URL}/order/id/${orderId}`);
       return response.data;
     } catch (error) {
       console.error("Lỗi khi tải đơn hàng:", error);
@@ -55,10 +56,11 @@ export const orderService = {
   },
 
   // Cập nhật trạng thái đơn hàng
-  updateOrderStatus: async (orderId: string, status: number) => {
+  updateOrderStatus: async (orderId: string, status: number, userId: string) => {
     try {
-      const response = await axios.patch(`${API_URL}/order/${orderId}/status`, {
+      const response = await axios.patch(`${API_URL}/order/status/${orderId}`, {
         status,
+        userId,
       });
       return response.data;
     } catch (error) {
@@ -67,11 +69,24 @@ export const orderService = {
     }
   },
 
+  // Cập nhật trạng thái đánh giá
+  updateReviewStatus: async (orderId: string, review: number) => {
+    try {
+      const response = await axios.patch(`${API_URL}/order/status/${orderId}`, {
+        review,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi khi cập nhật trạng thái đánh giá:", error);
+      throw error;
+    }
+  },
+
   // Cập nhật trạng thái thanh toán
   updatePaymentStatus: async (orderId: string, paymentStatus: number) => {
     try {
       const response = await axios.patch(
-        `${API_URL}/order/${orderId}/payment-status`,
+        `${API_URL}/order/payment-status/${orderId}`,
         {
           paymentStatus,
         }
@@ -97,13 +112,7 @@ export const orderService = {
   },
   getPaymentStatus: async (orderId: string) => {
     try {
-      const response = await axios.get(`${API_URL}/payment/status/${orderId}`, {
-        headers: {
-          "Content-Type": "application/json", 
-          // Thêm Authorization header nếu có authentication
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const response = await axiosInstance.get(`/payment/status/${orderId}`);
       return response.data;
     } catch (error) {
       console.error("Lỗi khi lấy trạng thái đơn hàng:", error);

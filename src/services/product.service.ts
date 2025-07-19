@@ -21,5 +21,15 @@ export const productService = {
       console.error('Lỗi khi tải sản phẩm:', error);
       throw error;
     }
+  },
+
+  getProductById: async (id: string) => {
+    try {
+      const response = await axios.get(`${API_URL}/product/id/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi tải sản phẩm:', error);
+      throw error;
+    }
   }
 };
