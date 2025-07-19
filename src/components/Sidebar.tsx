@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { User, Lock, Package } from 'lucide-react';
+import { User, Lock, Package, Wallet } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
     return (
@@ -16,6 +16,16 @@ export const Sidebar: React.FC = () => {
                 >
                     <User size={20} />
                     <span>Tài khoản</span>
+                </NavLink>
+                <NavLink
+                    to="/user/wallet"
+                    className={({ isActive }) =>
+                        `flex items-center gap-2 p-2 rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors ${isActive ? 'bg-blue-100 text-blue-600' : ''
+                        }`
+                    }
+                >
+                    <Wallet size={20} />
+                    <span>Ví</span>
                 </NavLink>
                 <NavLink
                     to="/user/changepassword"
@@ -37,6 +47,7 @@ export const Sidebar: React.FC = () => {
                     <Package size={20} />
                     <span>Quản lý đơn hàng</span>
                 </NavLink>
+                
             </nav>
         </aside>
     );

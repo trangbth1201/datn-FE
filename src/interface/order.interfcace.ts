@@ -77,6 +77,7 @@ export interface IOrder {
   userId: string;
   voucherId: string[];
   review: number;
+  price: number
 }
 
 export interface OrderItem {
@@ -95,6 +96,7 @@ export interface OrderItem {
   regularPrice: number;
   salePrice: number;
   cartItemId?: string;
+  slug?: string;
 }
 
 interface RecipientInfo {

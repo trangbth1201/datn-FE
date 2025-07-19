@@ -26,7 +26,7 @@ import { UserInfo } from "./pages/Userinfo";
 import { useSocket } from "./socket/useSocket";
 import { Sidebar } from "./components/Sidebar";
 import Review from "./pages/Review";
-
+import Wallet from "./pages/Wallet";
 const App: React.FC = () => {
   useSocket();
   return (
@@ -52,7 +52,7 @@ const App: React.FC = () => {
           path="/order/confirmation/:orderId"
           element={<OrderConfirmationPage />}
         />
-          <Route path="/review" element={<Review />} />
+        <Route path="/review" element={<Review />} />
 
         {/* Blogs */}
         <Route path="/blogs" element={<BlogCategory />} />
@@ -62,7 +62,7 @@ const App: React.FC = () => {
           path="/user/*"
           element={
             <ProtectedRoute>
-              <div className="flex min-h-screen">
+              <div className="flex min-h-screen w-3/4 mx-auto">
                 <Sidebar />
                 <main className="flex-1 p-4 md:p-6 lg:p-8">
                   <Routes>
@@ -70,6 +70,7 @@ const App: React.FC = () => {
                     <Route path="info" element={<UserInfo />} />
                     <Route path="changepassword" element={<ChangePassword />} />
                     <Route path="order" element={<Order />} />
+                    <Route path="wallet" element={<Wallet />} />
                   </Routes>
                 </main>
               </div>

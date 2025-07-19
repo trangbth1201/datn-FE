@@ -5,7 +5,7 @@ import './style/styles.scss'
 import App from './App'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { GoogleOAuthProvider } from '@react-oauth/google'
-import { BrowserRouter } from 'react-router-dom' 
+import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext '
 import { CartProvider } from './auth/CartContext'
 
@@ -16,10 +16,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <GoogleOAuthProvider clientId={clientId}>
-        <BrowserRouter> 
+        <BrowserRouter>
           <AuthProvider>
             <CartProvider>
-            <App />
+              <App />
             </CartProvider>
           </AuthProvider>
         </BrowserRouter>
