@@ -7,7 +7,7 @@ import EmojiPicker from "emoji-picker-react";
 import { FaImage } from "react-icons/fa";
 import axios from "axios";
 
-type Sender = "user" | "admin";
+type Sender = "user" | "admin" | "system";
 type Message = { sender: Sender; text: string };
 
 export default function ChatWidget() {
@@ -23,7 +23,6 @@ export default function ChatWidget() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const userId = localStorage.getItem("userId") ?? "";
   const token = localStorage.getItem("token") ?? "";
-
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -161,10 +160,11 @@ export default function ChatWidget() {
             {messages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`w-fit max-w-[80%] p-2 rounded-lg text-sm break-words whitespace-pre-wrap ${msg.sender === "user"
-                  ? "bg-blue-100 self-end ml-auto"
-                  : "bg-gray-200"
-                  }`}
+                className={`w-fit max-w-[80%] p-2 rounded-lg text-sm break-words whitespace-pre-wrap ${
+                  msg.sender === "user"
+                    ? "bg-blue-100 self-end ml-auto"
+                    : "bg-gray-200"
+                }`}
               >
                 {msg.text}
               </div>
@@ -238,7 +238,6 @@ export default function ChatWidget() {
               <FaPaperPlane className="w-4 h-4" />
             </button>
           </div>
-
         </div>
       ) : (
         <button
