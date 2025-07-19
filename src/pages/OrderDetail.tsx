@@ -555,11 +555,11 @@ const OrderDetail = () => {
                       {statusLabels[order.status]}
                     </Tag>
                   </Descriptions.Item>
-                  <Descriptions.Item label="Tổng tiền">
+                  {/* <Descriptions.Item label="Tổng tiền">
                     <Typography.Text strong style={{ color: "#16A34A", fontSize: "18px" }}>
                       {formatCurrency(order.totalAmount)}
                     </Typography.Text>
-                  </Descriptions.Item>
+                  </Descriptions.Item> */}
                   <Descriptions.Item label="Cập nhật lần cuối">
                     <Typography.Text>{formatDate(order.updatedAt)}</Typography.Text>
                   </Descriptions.Item>

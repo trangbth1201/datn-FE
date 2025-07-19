@@ -225,12 +225,13 @@ export const ChangeInfoUser = async (
   id: string,
   fullName: string,
   phone: string,
-  address: string
+  address: string,
+  avatar: string
 ) => {
   try {
     const response = await axiosInstance.patch(
       `/admin/users/edit/${id}`,
-      { fullName, phone, address }
+      { fullName, phone, address, avatar }
     );
 
     if (response.data.success) {

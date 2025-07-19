@@ -68,11 +68,11 @@ const Header: React.FC<HeaderProps> = ({ isHome, isPage }) => {
           Đơn hàng của tôi
         </a>
       </p>
-      <p className="text-center">
+      {/* <p className="text-center">
         <a href="/user/changepassword" className="text-sm mb-4">
           Đổi mật khẩu
         </a>
-      </p>
+      </p> */}
       <p className="text-sm text-center" onClick={logout}>
         Đăng xuất
       </p>
