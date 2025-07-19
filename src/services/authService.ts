@@ -52,26 +52,28 @@ export const refreshToken = async (): Promise<{ accessToken: string }> => {
 };
 
 export const register = async (
-  normallizedUser: {
-    fullName: string;
-    email: string;
-    password: string;
-    confirmPassword: string;
-  }
+  fullName: string,
+  email: string,
+  password: string,
+  confirmPassword: string
 ) => {
   try {
     const response = await axiosInstance.post("/register", {
-      ...normallizedUser,
+      fullName,
+      email,
+      password,
+      confirmPassword,
     });
     return response.data;
   } catch (error: any) {
-    console.error("Registration failed:", error);
-    if (error.response) {
-      throw new Error(
-        error.response.data.message || "An error occurred during registration."
-      );
-    }
-    throw new Error("An unexpected error occurred.");
+    console.error("Registration failed:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
+    throw new Error(
+      error.response?.data?.message || "An error occurred during registration."
+    );
   }
 };
 
