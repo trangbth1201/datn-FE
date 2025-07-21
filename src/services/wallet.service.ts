@@ -1,4 +1,4 @@
-import axios, { AxiosResponse } from "axios";
+import  { AxiosResponse } from "axios";
 import { CancelRefundPayload, CreateWalletPayload, RefundPayload, RefundResponse, TransactionsResponse, WalletResponse } from "../interface/wallet.interface";
 import axiosInstance from "../utils/axiosInstance";
 
@@ -6,7 +6,7 @@ import axiosInstance from "../utils/axiosInstance";
 const API_URL = "http://localhost:8080/api";
 
 // Axios instance with default config
-const api = axios.create({
+const api = axiosInstance.create({
   baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
@@ -84,7 +84,7 @@ export const refundOrder = async (
     return response.data;
   } catch (error: any) {
     throw new Error(
-      error.response?.data?.message || "Hoàn tiền đơn hàng thất bại"
+      error.response?.data?.message || "ğer hoàn tiền đơn hàng thất bại"
     );
   }
 };
