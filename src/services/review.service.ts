@@ -1,5 +1,4 @@
 import axiosInstance from "../utils/axiosInstance";
-import { refreshToken } from "../services/authService";
 
 const API_URL = "http://localhost:8080/api";
 
@@ -15,20 +14,9 @@ export const reviewService = {
         images: reviewData.images || [],
       };
 
-      let token = localStorage.getItem('accessToken');
-      if (!token) {
-        const refreshed = await refreshToken();
-        if (!refreshed || !refreshed.accessToken) {
-          throw new Error("No token found, please login.");
-        }
-        token = refreshed.accessToken;
-      }
-
-
       const response = await axiosInstance.post(`${API_URL}/comments/add`, requestData, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
       });
       console.log("Add review response:", response.data);
@@ -46,21 +34,7 @@ export const reviewService = {
   getReviewsForClient: async (productId: string) => {
     try {
       console.log("Fetching reviews for productId:", productId);
-      let token = localStorage.getItem('accessToken');
-      if (!token) {
-        const refreshed = await refreshToken();
-        if (!refreshed || !refreshed.accessToken) {
-          throw new Error("No token found, please login.");
-        }
-        token = refreshed.accessToken;
-      }
-
-
-      const response = await axiosInstance.get(`${API_URL}/comments/${productId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const response = await axiosInstance.get(`${API_URL}/comments/${productId}`);
       console.log("Get reviews response:", response.data);
       return response.data;
     } catch (error: any) {
