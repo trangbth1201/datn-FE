@@ -1,11 +1,11 @@
-import axios from 'axios';
+import axiosInstance from '../utils/axiosInstance';
 
 const API_URL = 'http://localhost:8080/api';
 
 export const productService = {
   getAllProducts: async () => {
     try {
-      const response = await axios.get(`${API_URL}/product?_page=1&_limit=100`);
+      const response = await axiosInstance.get(`${API_URL}/product?_page=1&_limit=100`);
       return response.data;
     } catch (error) {
       console.error('Lỗi khi tải sản phẩm:', error);
@@ -15,7 +15,7 @@ export const productService = {
 
   getProductBySlug: async (slug: string) => {
     try {
-      const response = await axios.get(`${API_URL}/product/slug/${slug}`);
+      const response = await axiosInstance.get(`${API_URL}/product/slug/${slug}`);
       return response.data;
     } catch (error) {
       console.error('Lỗi khi tải sản phẩm:', error);
@@ -25,7 +25,7 @@ export const productService = {
 
   getProductById: async (id: string) => {
     try {
-      const response = await axios.get(`${API_URL}/product/id/${id}`);
+      const response = await axiosInstance.get(`${API_URL}/product/id/${id}`);
       return response.data;
     } catch (error) {
       console.error('Lỗi khi tải sản phẩm:', error);
