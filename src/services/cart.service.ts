@@ -7,8 +7,6 @@ export const cartService = {
   getCart: async (): Promise<ICartResponse> => {
     try {
       const response = await axiosInstance.get(`${API_URL}`);
-      console.log("API getCart trả về:", response.data);
-
       const cartItem = response.data?.cart;
       if (cartItem && cartItem.length > 0) {
         localStorage.setItem("cartitem", JSON.stringify(cartItem));
