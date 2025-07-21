@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 
 const API_URL = "http://localhost:8080/api";
 
@@ -6,7 +6,7 @@ export const returnRequestService = {
   // Lấy danh sách yêu cầu hoàn hàng
   getAllReturnRequests: async (params = {}) => {
     try {
-      const response = await axios.get(`${API_URL}/return-requests`, {
+      const response = await axiosInstance.get(`${API_URL}/return-requests`, {
         params,
       });
 
@@ -20,7 +20,7 @@ export const returnRequestService = {
   // Lấy chi tiết yêu cầu hoàn hàng theo ID
   getReturnRequestById: async (id: string) => {
     try {
-      const response = await axios.get(`${API_URL}/return-requests/${id}`);
+      const response = await axiosInstance.get(`${API_URL}/return-requests/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Lỗi khi tải yêu cầu hoàn hàng ${id}:`, error);
@@ -32,7 +32,7 @@ export const returnRequestService = {
   createReturnRequest: async (data: any) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.post(`${API_URL}/return-requests`, data, {
+      const response = await axiosInstance.post(`${API_URL}/return-requests`, data, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

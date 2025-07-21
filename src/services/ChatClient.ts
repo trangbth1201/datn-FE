@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 import socket from "./socket"; 
 
 interface Message {
@@ -15,7 +15,7 @@ interface ConversationResponse {
 
 export const getConversation = async (token: string): Promise<ConversationResponse> => {
   try {
-    const response = await axios.get<ConversationResponse>("/conversation/user", {
+    const response = await axiosInstance.get<ConversationResponse>("/conversation/user", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -27,7 +27,7 @@ export const getConversation = async (token: string): Promise<ConversationRespon
   }
 };
 
-// 👉 Đăng ký lắng nghe socket realtime
+// Đăng ký lắng nghe socket realtime
 export const subscribeToMessages = (
   conversationId: string,
   onMessage: (msg: Message) => void

@@ -1,9 +1,4 @@
-import axios from "axios";
-
-axios.defaults.baseURL = "http://localhost:8080/api/";
-axios.defaults.withCredentials = true;
-
-
+import axiosInstance from "../utils/axiosInstance";
 
 export interface ChatMessage {
     _id?: string;
@@ -16,7 +11,7 @@ export interface ChatMessage {
 
 export const sendMess = async (content: string, token: string) => {
   try {
-    const response = await axios.post(
+    const response = await axiosInstance.post(
       "/send-message", 
       {
         content,
@@ -36,7 +31,7 @@ export const sendMess = async (content: string, token: string) => {
 
 export const getMessagesFromClient = async (token: string) => {
   try {
-    const response = await axios.get("/conversation/user", {
+    const response = await axiosInstance.get("/conversation/user", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
