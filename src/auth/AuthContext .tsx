@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("user", JSON.stringify(userData));
-      localStorage.removeItem("token");
+      localStorage.removeItem("accessToken");
       setUser(userData);
 
       queryClient.invalidateQueries({ queryKey: ["cart"] });

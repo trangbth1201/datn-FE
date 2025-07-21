@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { cartService } from "../services/cart.service";
+import { useCart } from "../auth/CartContext";
 
 // --- Định nghĩa các Interface cho TypeScript ---
 interface OrderItem {
@@ -47,6 +50,7 @@ const PaymentMethodPage = () => {
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null); // Trạng thái cho thông báo lỗi
+  const { cartCount, updateCartCount } = useCart();
 
   // --- Danh sách phương thức thanh toán ---
   const paymentMethods: PaymentMethod[] = [
@@ -116,37 +120,45 @@ const PaymentMethodPage = () => {
 
   // --- Hàm xử lý khi submit form ---
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!selectedMethod) {
-      setError("Vui lòng chọn phương thức thanh toán.");
-      return;
-    } else {
-      // Xử lý các phương thức khác (COD, Chuyển khoản)
-      setIsLoading(true);
-      setError(null);
-      try {
-        const completeOrderData = {
-          ...orderSummary,
-          shippingInfo,
-          paymentMethod: selectedMethod,
-          orderDate: new Date().toISOString(),
-          orderStatus: "pending",
-        };
-        localStorage.setItem("completeOrderData", JSON.stringify(completeOrderData));
-        localStorage.setItem("paymentMethod", selectedMethod);
+  if (!selectedMethod) {
+    setError("Vui lòng chọn phương thức thanh toán.");
+    return;
+  }
 
-        // Giả lập quá trình xử lý
-        setTimeout(() => {
-          navigate("/checkout/review");
-        }, 500);
+  setIsLoading(true);
+  setError(null);
 
-      } catch (err) {
-        setError("Có lỗi xảy ra khi lưu thông tin đơn hàng. Vui lòng thử lại.");
-        setIsLoading(false);
-      }
-    }
-  };
+  try {
+    const completeOrderData = {
+      ...orderSummary,
+      shippingInfo,
+      paymentMethod: selectedMethod,
+      orderDate: new Date().toISOString(),
+      orderStatus: "pending", // hoặc 0 nếu backend dùng enum số
+    };
+
+    localStorage.setItem("completeOrderData", JSON.stringify(completeOrderData));
+    localStorage.setItem("paymentMethod", selectedMethod);
+
+    setTimeout(() => {
+      // ✅ Xóa giỏ hàng
+      localStorage.removeItem("cart");
+      document.cookie = "cart=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+      // ✅ Cập nhật số lượng giỏ hàng
+      updateCartCount({ cart: [], success: true });
+
+      setIsLoading(false);
+      navigate("/checkout/review");
+    }, 500);
+  } catch (err) {
+    setError("Có lỗi xảy ra khi lưu thông tin đơn hàng. Vui lòng thử lại.");
+    setIsLoading(false);
+  }
+};
+
 
   // --- UI hiển thị khi đang tải dữ liệu ---
   if (!orderSummary || !shippingInfo) {

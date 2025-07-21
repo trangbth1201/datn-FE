@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Pencil } from "lucide-react";
-import { SidebarLink } from "./SidebarLink";
+// import { SidebarLink } from "./SidebarLink";
 import { ChangeInfoUser } from "../services/authService";
 import Swal from "sweetalert2";
 import { useAuth } from "../auth/AuthContext ";
@@ -33,7 +33,7 @@ const AccountSettings: React.FC = () => {
   const handleUpdateInfo = async () => {
     if (!user) return;
 
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken");
 
     if (!token) {
       Swal.fire({
@@ -52,7 +52,6 @@ const AccountSettings: React.FC = () => {
         form.fullName,
         form.phone,
         form.address,
-        token
       );
 
       if (res.success) {

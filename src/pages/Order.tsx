@@ -90,6 +90,7 @@ const Order = () => {
   const fetchOrders = async () => {
     setLoading(true);
     const res = await userGetOrder(userId || "");
+    console.log(res.data)
     if (res.success) {
       setOrders(res.data);
     } else {
@@ -320,6 +321,7 @@ const Order = () => {
                 <div className="flex items-center gap-4">
                   {order.items[0] && (
                     <>
+                    <input type="text" value={order.items[0].image || "/placeholder.png"} />
                       <img
                         src={order.items[0].image || "/placeholder.png"}
                         alt={order.items[0].productName}

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Eye, EyeOff, Check, X } from "lucide-react";
 import Swal from "sweetalert2";
-import { SidebarLink } from "../components/SidebarLink";
+// import { SidebarLink } from "../components/SidebarLink";
 import { useAuth } from "../auth/AuthContext ";
 import { userChangePass } from "../services/authService";
 
@@ -82,9 +82,9 @@ const ChangePassword: React.FC = () => {
     e.preventDefault();
 
     if (!user) return;
-    const token = localStorage.getItem("token");
+    // const token = localStorage.getItem("token");
 
-    const res = await userChangePass(user._id, formData.current, formData.newPwd ,token ?? "");
+    const res = await userChangePass(user._id, formData.current, formData.newPwd);
 
     if (res.success) {
       Swal.fire({
