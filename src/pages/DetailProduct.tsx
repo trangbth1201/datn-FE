@@ -37,11 +37,16 @@ export default function DetailProduct() {
   const { data: attributes, isLoading: isLoadingAttributes } = useQuery<IAttribute[]>({
     queryKey: ["attributes", product?._id],
     queryFn: () => {
-      const allAttributes = product?.variation?.flatMap((v) => v.attributes || []) || [];
+      const activeVariations = product?.variation?.filter((v) => v.isActive) || [];
       const attributeMap = new Map<string, Set<string>>();
-      allAttributes.forEach((attr) => {
-        if (!attributeMap.has(attr.attributeName)) attributeMap.set(attr.attributeName, new Set(attr.values));
-        else attr.values.forEach((value) => attributeMap.get(attr.attributeName)!.add(value));
+      activeVariations.forEach((v) => {
+        v.attributes?.forEach((attr) => {
+          if (!attributeMap.has(attr.attributeName)) {
+            attributeMap.set(attr.attributeName, new Set(attr.values));
+          } else {
+            attr.values.forEach((value) => attributeMap.get(attr.attributeName)!.add(value));
+          }
+        });
       });
       return Array.from(attributeMap.entries()).map(([attributeName, values]) => ({
         attributeName,
@@ -103,15 +108,9 @@ export default function DetailProduct() {
           Object.entries(selectedAttributes).every(([attrName, attrValue]) => {
             const variationAttr = v.attributes?.find((a) => a.attributeName === attrName);
             return variationAttr?.values.includes(attrValue);
-          }) && v.stock > 0
+          }) && v.isActive
         );
-      }) ||
-      activeVariations.find((v) =>
-        Object.entries(selectedAttributes).every(([attrName, attrValue]) => {
-          const variationAttr = v.attributes?.find((a) => a.attributeName === attrName);
-          return variationAttr?.values.includes(attrValue);
-        })
-      ) || firstActiveVariation
+      }) || firstActiveVariation
     );
   }, [selectedAttributes, activeVariations, firstActiveVariation]);
 
@@ -342,7 +341,11 @@ export default function DetailProduct() {
               {attributes.map((attr) => (
                 <div key={attr.attributeName} className="mb-6">
                   <div className="font-semibold mb-2">
-                    {attr.attributeName === "Test Color" ? "Màu sắc:" : attr.attributeName === "Test Kích Thước" ? "Kích thước:" : attr.attributeName.toUpperCase() + ":"}
+                    {attr.attributeName === "Test Color"
+                      ? "Màu sắc:"
+                      : attr.attributeName === "Test Kích Thước"
+                        ? "Kích thước:"
+                        : attr.attributeName.toUpperCase() + ":"}
                   </div>
                   <div className="flex gap-3 flex-wrap">
                     {attr.values.map((value) => {
@@ -415,7 +418,7 @@ export default function DetailProduct() {
                     </button>
                   </div>
                   <span className="text-sm text-gray-500">
-                    {selectedVariation?.stock ? `Tối đa ${selectedVariation.stock} sản phẩm` : "Vui lòng chọn biến thể"}
+                    {selectedVariation?.stock ? `Tối đa ${selectedVariation.stock} sản phẩm` : "Hết hàng"}
                   </span>
                 </div>
               </div>
@@ -490,16 +493,16 @@ export default function DetailProduct() {
                     </div>
                     <div className="mt-6 grid grid-cols-5 gap-4">
                       {[5, 4, 3, 2, 1].map((star) => {
-                        const count = ratingDistribution[star.toString()];
+                        const countValue = ratingDistribution[star.toString()];
                         const total = reviewsData?.totalComments || reviewsData?.comments.length || 0;
-                        const percentage = total > 0 ? (count / total) * 100 : 0;
+                        const percentage = total > 0 ? (countValue / total) * 100 : 0;
                         return (
                           <div key={star} className="flex items-center gap-2">
                             <span className="text-sm font-medium">{star} sao</span>
                             <div className="flex-1 bg-gray-200 rounded-full h-2.5">
                               <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${percentage}%` }} />
                             </div>
-                            <span className="text-sm text-gray-600">{count}</span>
+                            <span className="text-sm text-gray-600">{countValue}</span>
                           </div>
                         );
                       })}
@@ -550,15 +553,15 @@ export default function DetailProduct() {
                             </div>
                             <span className="text-xs text-gray-500">{new Date(review.createdAt).toLocaleDateString("vi-VN")}</span>
                           </div>
-                          <p className="text-gray-700 mb-2">Đánh giá: {reviewText || 'Không có đánh giá'}</p>
-                          <p className="text-gray-700 mb-2">Chất lượng sản phẩm: {productQuality || 'Không có đánh giá chất lượng'}</p>
+                          <p className="text-gray-700 mb-2">Đánh giá: {reviewText || "Không có đánh giá"}</p>
+                          <p className="text-gray-700 mb-2">Chất lượng sản phẩm: {productQuality || "Không có đánh giá chất lượng"}</p>
                           {review.images.length > 0 && (
                             <div className="flex gap-2 mb-2 overflow-x-auto pb-2">
                               {review.images.map((media, index) => (
                                 <div
                                   key={index}
                                   className="relative w-16 h-16 rounded-lg overflow-hidden cursor-pointer"
-                                  onClick={() => setPreviewMedia({ url: media, type: isVideo(media) ? 'video' : 'image' })}
+                                  onClick={() => setPreviewMedia({ url: media, type: isVideo(media) ? "video" : "image" })}
                                 >
                                   {isVideo(media) ? (
                                     <>
@@ -570,7 +573,7 @@ export default function DetailProduct() {
                                         onMouseOut={(e) => e.currentTarget.pause()}
                                       />
                                       <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className="text-white text-2xl" style={{ textShadow: '0 0 4px rgba(0, 0, 0, 0.5)' }}>
+                                        <span className="text-white text-2xl" style={{ textShadow: "0 0 4px rgba(0, 0, 0, 0.5)" }}>
                                           ▶
                                         </span>
                                       </div>
@@ -615,11 +618,19 @@ export default function DetailProduct() {
                       ? Math.round((1 - p.variation[0].salePrice / p.variation[0].regularPrice) * 100)
                       : 0;
                   return (
-                    <div key={p._id} className="border p-4 rounded-lg hover:shadow-lg cursor-pointer transition-shadow" onClick={() => navigate(`/products/${p.slug}`)}>
+                    <div
+                      key={p._id}
+                      className="border p-4 rounded-lg hover:shadow-lg cursor-pointer transition-shadow"
+                      onClick={() => navigate(`/products/${p.slug}`)}
+                    >
                       <div className="relative aspect-square overflow-hidden rounded">
                         <img src={p.image[0]} alt={p.name} className="w-full h-full object-cover" />
-                        {p.isActive && <span className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-bl-md rounded-tr-md">Mới</span>}
-                        {discount > 0 && <span className="absolute top-10 left-2 bg-red-500 text-white text-xs px-1 py-1 rounded-bl-md rounded-tr-md">-{discount}%</span>}
+                        {p.isActive && (
+                          <span className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-bl-md rounded-tr-md">Mới</span>
+                        )}
+                        {discount > 0 && (
+                          <span className="absolute top-10 left-2 bg-red-500 text-white text-xs px-1 py-1 rounded-bl-md rounded-tr-md">-{discount}%</span>
+                        )}
                       </div>
                       <h3 className="text-sm font-semibold truncate mt-4">{p.name}</h3>
                       <div className="flex justify-between items-center mt-1">
@@ -649,7 +660,8 @@ export default function DetailProduct() {
                     <li
                       key={key}
                       onClick={() => setSelectedCategory(key)}
-                      className={`flex justify-between items-center cursor-pointer px-2 py-3 ${selectedCategory === key ? "bg-gray-200 font-semibold" : "hover:bg-gray-100"}`}
+                      className={`flex justify-between items-center cursor-pointer px-2 py-3 ${selectedCategory === key ? "bg-gray-200 font-semibold" : "hover:bg-gray-100"
+                        }`}
                     >
                       <span className="text-gray-800 text-sm font-medium">Tin khuyến mãi</span>
                       <span className="text-gray-400 text-base font-bold">+</span>
@@ -675,7 +687,11 @@ export default function DetailProduct() {
                 {filteredNewProducts.map((p) => {
                   const price = p.variation?.[0]?.salePrice > 0 ? p.variation[0].salePrice : p.variation?.[0]?.regularPrice || 0;
                   return (
-                    <div key={p._id} className="flex space-x-3 border-b pb-3 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => navigate(`/products/${p.slug}`)}>
+                    <div
+                      key={p._id}
+                      className="flex space-x-3 border-b pb-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => navigate(`/products/${p.slug}`)}
+                    >
                       <div className="flex-shrink-0 w-16 h-16 overflow-hidden rounded">
                         <img src={p.image[0] || "/placeholder.svg"} alt={p.name} className="w-full h-full object-cover" />
                       </div>
@@ -702,32 +718,15 @@ export default function DetailProduct() {
           </Button>,
         ]}
       >
-        <img
-          src={chon_size}
-          alt="Size Guide"
-          width="100%"
-        />
+        <img src={chon_size} alt="Size Guide" width="100%" />
       </Modal>
-      <Modal
-        open={!!previewMedia}
-        onCancel={() => setPreviewMedia(null)}
-        footer={null}
-        width={800}
-      >
+      <Modal open={!!previewMedia} onCancel={() => setPreviewMedia(null)} footer={null} width={800}>
         {previewMedia && (
           <div className="flex justify-center">
-            {previewMedia.type === 'video' ? (
-              <video
-                src={previewMedia.url}
-                controls
-                className="w-full max-h-[500px] object-contain"
-              />
+            {previewMedia.type === "video" ? (
+              <video src={previewMedia.url} controls className="w-full max-h-[500px] object-contain" />
             ) : (
-              <img
-                src={previewMedia.url}
-                alt="Media preview"
-                className="w-full max-h-[500px] object-contain"
-              />
+              <img src={previewMedia.url} alt="Media preview" className="w-full max-h-[500px] object-contain" />
             )}
           </div>
         )}
