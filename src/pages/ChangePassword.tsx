@@ -82,7 +82,6 @@ const ChangePassword: React.FC = () => {
     e.preventDefault();
 
     if (!user) return;
-    // const token = localStorage.getItem("token");
 
     const res = await userChangePass(user._id, formData.current, formData.newPwd);
 
